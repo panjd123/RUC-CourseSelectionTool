@@ -13,7 +13,7 @@
 
 0. `pip install aiohttp ruclogin`
 
-1. （**重要**）配置 [ruclogin](https://github.com/panjd123/ruclogin)
+1. （**重要**）命令行执行 `ruclogin` 配置账号密码，详见 [ruclogin](https://github.com/panjd123/ruclogin)
 
 2. （可选）调整 `config.ini`
 
