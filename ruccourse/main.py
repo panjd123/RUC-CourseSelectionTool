@@ -134,17 +134,25 @@ async def grab(json_data):
             errorCode = result["errorCode"]
             cls_name = json_data["ktmc_name"]
             "eywxt.save.stuLimit.error"  # 选课人数已满
-            "eywxt.save.msLimit.error"  # 已选课数目达到类别上限
+            "eywxt.save.msLimit.error"  # 本身有剩余名额，但同类别已选数目达到上限
             "服务器繁忙，请稍后再试！"  # 服务器繁忙，请稍后再试！
             if errorCode == "success":
                 logger.imp_info(f"抢到 {cls_name}")
                 json_datas.remove(json_data)
+                del log_infos.course_info[json_data["ktmc_name"]]
             elif errorCode == "eywxt.save.msLimit.error":
-                logger.imp_info(f"{cls_name} 有名额，但已选课数目达到类别上限")
+                logger.imp_info(f"{cls_name} 有名额，但同类别已选数目达到上限")
                 json_datas.remove(json_data)
+                del log_infos.course_info[json_data["ktmc_name"]]
             elif errorCode == "服务器繁忙，请稍后再试！":
                 log_infos.iter_reject_requests += 1
                 log_infos.course_info[cls_name]["reject"] += 1
+            elif errorCode == "eywxt.save.cantXkByCopy.error":
+                logger.imp_info(f"{cls_name} 已选，跳过")
+                json_datas.remove(json_data)
+                del log_infos.course_info[json_data["ktmc_name"]]
+            else:
+                logger.warning(f"未知 errCode: {errorCode}，请联系开发人员")
             if len(json_datas) == 0:
                 logger.imp_info("抢课列表为空")
                 logger.imp_info("脚本已停止")
@@ -181,7 +189,7 @@ async def log(stop_signal):
 
         if worst_reqs < settings.reject_warning_threshold:
             logger.warning(
-                f"{str(round(rej_ratio*100,2))+'%':<5} 的请求被拒绝，真实请求速度为 {round(tru_reqs,2):<5} req/s，最低请求速度为 {round(worst_reqs,2):<5} req/s"
+                f"{str(round(rej_ratio*100,2))+'%':<5} 的请求被拒绝，真实请求速度为 {round(tru_reqs,2):<5} req/s，其中最低请求速度的课程为 {round(worst_reqs,2):<5} req/s"
             )
 
         logger.info(
@@ -255,6 +263,11 @@ async def main():
     if settings.enabled_dynamic_requests and settings.target_requests_per_second > 50:
         logger.warning("动态调整对请求速度过高的情况不适用，请自行查看日志确认速率是否符合要求")
         settings.enabled_dynamic_requests = False
+
+    if settings.target_requests_per_second > 300:
+        logger.error("请求速度过高会导致意料外的问题，同时会给服务器正常运行带来压力，如果你清楚你在做什么，请自行修改源代码")
+        logger.imp_info("脚本已停止")
+        exit(1)
 
     if settings.gap == 0:
         logger.imp_info("gap=0，脚本将不间断执行")
