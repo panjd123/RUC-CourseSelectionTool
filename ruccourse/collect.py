@@ -49,7 +49,7 @@ def main():
 
     driver.switch_to.window(driver.window_handles[-1])
     del driver.requests
-    print("在浏览器里，选一遍所有你想选的课程（即使失败）")
+    print("在浏览器里，选一遍所有你想选的课程（请确保返回成功或选课人数已经到达上限，而不是时间冲突！！！）")
     print("等待浏览器被关闭...")
     while True:
         try:

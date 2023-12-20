@@ -151,7 +151,7 @@ async def grab(json_data):
                 logger.imp_info(f"{cls_name} 已选，跳过")
                 json_datas.remove(json_data)
                 del log_infos.course_info[json_data["ktmc_name"]]
-            else:
+            elif errorCode != "eywxt.save.stuLimit.error":
                 logger.warning(f"未知 errCode: {errorCode}，请联系开发人员")
             if len(json_datas) == 0:
                 logger.imp_info("抢课列表为空")
@@ -187,7 +187,10 @@ async def log(stop_signal):
                     / (log_infos.toc - log_infos.tic),
                 )
 
-        if worst_reqs < settings.reject_warning_threshold:
+        if (
+            worst_reqs < settings.reject_warning_threshold
+            and log_infos.toc - log_infos.tic > 5
+        ):
             logger.warning(
                 f"{str(round(rej_ratio*100,2))+'%':<5} 的请求被拒绝，真实请求速度为 {round(tru_reqs,2):<5} req/s，其中最低请求速度的课程为 {round(worst_reqs,2):<5} req/s"
             )
@@ -197,20 +200,14 @@ async def log(stop_signal):
         )
 
         flush = False
-        if settings.enabled_dynamic_requests:
-            if (
-                tru_reqs < settings.target_requests_per_second * 0.9
-                and log_infos.toc - log_infos.tic > 5
-            ):
+        if settings.enabled_dynamic_requests and log_infos.toc - log_infos.tic > 5:
+            if tru_reqs < settings.target_requests_per_second * 0.9:
                 settings.requests_per_second = settings.requests_per_second * 1.05
                 logger.info(
                     f"请求速度小于预期，已调整为{round(settings.requests_per_second,2):<6} req/s"
                 )
                 flush = True
-            if (
-                tru_reqs > settings.target_requests_per_second * 1.1
-                and log_infos.toc - log_infos.tic > 5
-            ):
+            if tru_reqs > settings.target_requests_per_second * 1.1:
                 settings.requests_per_second = settings.requests_per_second * 0.95
                 logger.info(
                     f"请求速度大于预期，已调整为{round(settings.requests_per_second,2)} req/s"
@@ -260,12 +257,16 @@ async def main():
     for json_data in json_datas:
         logger.imp_info(f"待抢课程：{json_data['ktmc_name']}")
 
-    if settings.enabled_dynamic_requests and settings.target_requests_per_second > 50:
-        logger.warning("动态调整对请求速度过高的情况不适用，请自行查看日志确认速率是否符合要求")
+    if settings.enabled_dynamic_requests and settings.target_requests_per_second > 30:
+        logger.warning(
+            f"动态调整对请求速度过高的情况（{settings.target_requests_per_second }> 30）不适用，请自行查看日志确认速率是否符合要求"
+        )
         settings.enabled_dynamic_requests = False
 
-    if settings.target_requests_per_second > 300:
-        logger.error("请求速度过高会导致意料外的问题，同时会给服务器正常运行带来压力，如果你清楚你在做什么，请自行修改源代码")
+    if settings.target_requests_per_second > 100:
+        logger.error(
+            f"请求速度过高（{settings.target_requests_per_second }> 100）会导致意料外的问题，同时会给服务器正常运行带来压力，如果你清楚你在做什么，请自行修改源代码"
+        )
         logger.imp_info("脚本已停止")
         exit(1)
 
