@@ -66,7 +66,7 @@ def main():
                     json_datas.append(d)
             pickle.dump(json_datas, open(osp.join(ROOT, "json_datas.pkl"), "wb"))
             print("你选择的课程是：", " ".join([data["ktmc_name"] for data in json_datas]))
-            break
+            return json_datas
         driver.implicitly_wait(0.1)
 
 

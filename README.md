@@ -55,6 +55,12 @@ jw.ruc.edu.cn get cookies time: 1.925s, check cookies time: 0.395s
 2023-12-20 17:10:25,184 - IMPORTANT_INFO - 脚本开始运行
 2023-12-20 17:10:25,184 - IMPORTANT_INFO - 加载配置文件 D:\Program\anaconda3\Lib\site-packages\ruccourse\config.ini
 2023-12-20 17:10:25,184 - IMPORTANT_INFO - 日志输出到 D:\Program\anaconda3\Lib\site-packages\ruccourse\ruccourse.log
+2023-12-20 17:10:25,184 - ERROR - 抢课列表为空
+你需要先手动选择要抢的课，是否现在开始选择（请确保你已经正确配置好 ruclogin） Y/n：
+请等待脚本输出“等待浏览器被关闭...”后，再开始选择课程，选择后关闭浏览器。按回车键继续...
+在浏览器里，选一遍所有你想选的课程（即使失败）
+等待浏览器被关闭...
+你选择的课程是： 信息检索导论01班
 2023-12-20 17:10:25,185 - IMPORTANT_INFO - 学期：2023-2024学年夏季学期
 2023-12-20 17:10:25,185 - IMPORTANT_INFO - 待抢课程：信息检索导论01班
 2023-12-20 17:10:25,185 - IMPORTANT_INFO - gap=0，脚本将不间断执行

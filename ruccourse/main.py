@@ -10,10 +10,10 @@ import logging
 import os
 import os.path as osp
 
-try:
-    import ruccourse.collect as collect
-except:
+if __name__ == "__main__":  # 并不是一种优雅的写法，待改进
     import collect
+else:
+    from . import collect
 
 from docopt import docopt
 
@@ -181,11 +181,11 @@ async def log(stop_signal):
 
         if worst_reqs < settings.reject_warning_threshold:
             logger.warning(
-                f"{round(rej_ratio*100,3)}% 的请求被拒绝，真实请求速度为 {round(tru_reqs,3)} req/s，最低请求速度为 {round(worst_reqs,3)} req/s"
+                f"{str(round(rej_ratio*100,2))+'%':<5} 的请求被拒绝，真实请求速度为 {round(tru_reqs,2):<5} req/s，最低请求速度为 {round(worst_reqs,2):<5} req/s"
             )
 
         logger.info(
-            f"req/s: {round(reqs, 3)}\ttru_reqs/s: {round(tru_reqs,3)}\ttotal: {log_infos.total_requests}"
+            f"req/s: {round(reqs, 2):<5}\ttru_reqs/s: {round(tru_reqs,2):<5}\ttotal: {log_infos.total_requests}"
         )
 
         flush = False
@@ -196,7 +196,7 @@ async def log(stop_signal):
             ):
                 settings.requests_per_second = settings.requests_per_second * 1.05
                 logger.info(
-                    f"请求速度小于预期，已调整为{round(settings.requests_per_second,2)} req/s"
+                    f"请求速度小于预期，已调整为{round(settings.requests_per_second,2):<6} req/s"
                 )
                 flush = True
             if (
@@ -235,8 +235,7 @@ async def main():
         logger.error("抢课列表为空")
         collect_now = input("你需要先手动选择要抢的课，是否现在开始选择（请确保你已经正确配置好 ruclogin） Y/n：")
         if collect_now.lower().startswith("y") or collect_now == "":
-            collect.main()
-            json_datas = pickle.load(open(json_datas_path, "rb"))
+            json_datas = collect.main()
             if len(json_datas) == 0:
                 logger.error("抢课列表为空")
                 logger.imp_info("脚本已停止")
@@ -306,11 +305,13 @@ def run():
             logger.imp_info("脚本已停止")
             exit(0)
         except Exception as e:
-            print(e)
-            if not check_cookies(cookies, domain="jw"):
-                logger.warning("cookie失效")
-            else:
-                logger.error(e)
+            try:
+                if not check_cookies(cookies, domain="jw"):
+                    logger.warning("cookie失效")
+                    continue
+            except NameError:
+                pass
+            raise e
 
 
 __doc__ = """
