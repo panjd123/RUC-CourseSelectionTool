@@ -17,7 +17,7 @@
 
 2. （可选）调整 `config.ini`
 
-4. 获取要抢的课：一个单元一个单元地执行 jupyter 中的代码
+4. 获取要抢的课：`python collect.py` 等待选课界面加载后，选一遍要选的课，然后关掉浏览器
 
 5. 执行脚本：`python main.py`
 

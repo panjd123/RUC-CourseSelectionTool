@@ -42,13 +42,15 @@ stage = int(config["DEFAULT"]["stage"])
 log_interval_seconds = int(config["DEFAULT"]["log_interval_seconds"])
 
 if not os.path.exists("json_datas.pkl"):
-    logger.error("未找到抢课列表，请先执行 collect.ipynb 抓包")
+    logger.error("未找到抢课列表，请先执行 collect.py 抓包")
     logger.imp_info("脚本已停止")
     exit(1)
 
-json_datas: list = pickle.load(open("json_datas.pkl", "rb"))
-
-if len(json_datas) == 0:
+try:
+    json_datas: list = pickle.load(open("json_datas.pkl", "rb"))
+    if len(json_datas) == 0:
+        raise ValueError
+except Exception as e:
     logger.error("抢课列表为空")
     logger.imp_info("脚本已停止")
     exit(1)
@@ -80,13 +82,14 @@ else:
 
 total_requests = 0  # 总请求数
 iter_requests = 0
+iter_reject_requests = 0
 tic = 0
 
 cookies = {}
 
 
 async def grab(json_data):
-    global cookies, json_datas, total_requests, iter_requests
+    global cookies, json_datas, total_requests, iter_requests, iter_reject_requests
     url = "https://jw.ruc.edu.cn/resService/jwxtpt/v1/xsd/stuCourseCenterController/saveStuXkByRmdx"
     params = {
         "resourceCode": "XSMH0303",
@@ -107,16 +110,17 @@ async def grab(json_data):
             result = await response.json()
             errorCode = result["errorCode"]
             cls_name = json_data["ktmc_name"]
-            if (
-                errorCode != "eywxt.save.stuLimit.error"
-                and errorCode != "eywxt.save.msLimit.error"
-            ):
+            "eywxt.save.stuLimit.error"  # 选课人数已满
+            "eywxt.save.msLimit.error"  # 已选课数目达到类别上限
+            "服务器繁忙，请稍后再试！"  # 服务器繁忙，请稍后再试！
+            if errorCode == "success":
                 logger.imp_info(f"抢到 {cls_name}")
                 json_datas.remove(json_data)
             elif errorCode == "eywxt.save.msLimit.error":
-                pass
                 logger.imp_info(f"{cls_name} 有名额，但已选课数目达到类别上限")
                 json_datas.remove(json_data)
+            elif errorCode == "服务器繁忙，请稍后再试！":
+                iter_reject_requests += 1
             if len(json_datas) == 0:
                 logger.imp_info("抢课列表为空")
                 logger.imp_info("脚本已停止")
@@ -134,26 +138,37 @@ async def grab_all():
 
 
 async def log(stop_signal):
-    global tic, total_requests, iter_requests, requests_per_second
+    global tic, total_requests, iter_requests, iter_reject_requests, requests_per_second
     tic = timer()
     iter_requests = 0
+    iter_reject_requests = 0
     await asyncio.sleep(1)
     while not stop_signal.is_set():
         toc = timer()
         reqs = iter_requests / (toc - tic)
-        logger.info(f"req/s: {round(reqs, 3)}\ttotal: {total_requests}")
+        tru_reqs = (iter_requests - iter_reject_requests) / (toc - tic)
+        rej_ratio = iter_reject_requests / iter_requests
+        if rej_ratio > 0.1:
+            logger.warning(
+                f"{round(iter_reject_requests/iter_requests*100,3)}% 的请求被拒绝，真实请求速度为 {round(tru_reqs,3)} req/s"
+            )
+        logger.info(
+            f"req/s: {round(reqs, 3)}\ttru_reqs/s: {round(tru_reqs,3)}\ttotal: {total_requests}"
+        )
 
         if enabled_dynamic_requests:
-            if reqs < target_requests_per_second * 0.9 and toc - tic > 5:
+            if tru_reqs < target_requests_per_second * 0.9 and toc - tic > 5:
                 requests_per_second = requests_per_second * 1.05
                 logger.info(f"请求速度小于预期，已调整为{round(requests_per_second,2)} req/s")
                 tic = toc
                 iter_requests = 0
-            if reqs > target_requests_per_second * 1.1 and toc - tic > 5:
+                iter_reject_requests = 0
+            if tru_reqs > target_requests_per_second * 1.1 and toc - tic > 5:
                 requests_per_second = requests_per_second * 0.95
                 logger.info(f"请求速度大于预期，已调整为{round(requests_per_second,2)} req/s")
                 tic = toc
                 iter_requests = 0
+                iter_reject_requests = 0
 
         await asyncio.sleep(log_interval_seconds)
 
