@@ -3,6 +3,8 @@
 [![PyPI Downloads](https://img.shields.io/pypi/dm/ruccouse.svg?label=PyPI%20downloads)](
 https://pypi.org/project/ruccouse/) [![GitHub Repo stars](https://img.shields.io/github/stars/panjd123/RUC-CourseSelectionTool?label=Github%20stars)](https://github.com/panjd123/RUC-CourseSelectionTool) 
 
+**欢迎 Star！**
+
 适用：时间优先选课阶段（即本学期末，下学期初）
 
 支持：
@@ -11,8 +13,6 @@ https://pypi.org/project/ruccouse/) [![GitHub Repo stars](https://img.shields.io
 - 请求速度控制
 - 自动重试
 - 自动停止
-
-**欢迎 Star！**
 
 ## Simple Usage
 
