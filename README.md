@@ -1,7 +1,7 @@
 # 中国人民大学半自动化抢课脚本
 
-[![PyPI Downloads](https://img.shields.io/pypi/dm/ruccouse.svg?label=PyPI%20downloads)](
-https://pypi.org/project/ruccouse/) [![GitHub Repo stars](https://img.shields.io/github/stars/panjd123/RUC-CourseSelectionTool?label=Github%20stars)](https://github.com/panjd123/RUC-CourseSelectionTool) 
+[![PyPI Downloads](https://img.shields.io/pypi/dm/ruccourse.svg?label=PyPI%20downloads)](
+https://pypi.org/project/ruccourse/) [![GitHub Repo stars](https://img.shields.io/github/stars/panjd123/RUC-CourseSelectionTool?label=Github%20stars)](https://github.com/panjd123/RUC-CourseSelectionTool) 
 
 **欢迎 Star！**
 
