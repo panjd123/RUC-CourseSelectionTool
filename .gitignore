@@ -1,3 +1,4 @@
 json_datas.pkl
 *.log
 course/
+__pycache__/
