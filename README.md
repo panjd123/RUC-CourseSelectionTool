@@ -19,7 +19,7 @@ https://pypi.org/project/ruccourse/) [![GitHub Repo stars](https://img.shields.i
 ```
 pip install ruccourse
 ruclogin                # only need to run once
-ruccouse --verbose
+ruccourse --verbose
 ```
 
 > 关于 ruclogin 这个包，你可以查看 [ruclogin](https://github.com/panjd123/ruclogin) 的具体文档。
