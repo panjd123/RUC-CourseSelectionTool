@@ -111,8 +111,11 @@ class Settings(object):
         return self.__str__()
 
 
+unknownErrorCode = set()
+
+
 async def grab(json_data):
-    global cookies, json_datas, log_infos
+    global cookies, json_datas, log_infos, unknownErrorCode
     url = "https://jw.ruc.edu.cn/resService/jwxtpt/v1/xsd/stuCourseCenterController/saveStuXkByRmdx"
     params = {
         "resourceCode": "XSMH0303",
@@ -151,8 +154,16 @@ async def grab(json_data):
                 logger.imp_info(f"{cls_name} 已选，跳过")
                 json_datas.remove(json_data)
                 del log_infos.course_info[json_data["ktmc_name"]]
+            elif errorCode in unknownErrorCode:
+                log_infos.iter_reject_requests += 1
+                log_infos.course_info[cls_name]["reject"] += 1
             elif errorCode != "eywxt.save.stuLimit.error":
-                logger.warning(f"未知 errCode: {errorCode}，请联系开发人员")
+                unknownErrorCode.add(errorCode)
+                log_infos.iter_reject_requests += 1
+                log_infos.course_info[cls_name]["reject"] += 1
+                logger.warning(
+                    f"未知 errCode: {errorCode}，请联系开发人员。将视该 errorCode 为服务器拒绝响应，请自行判断是否会影响抢课。"
+                )
             if len(json_datas) == 0:
                 logger.imp_info("抢课列表为空")
                 logger.imp_info("脚本已停止")
@@ -164,7 +175,7 @@ async def grab(json_data):
 
 
 async def log(stop_signal):
-    global log_infos, settings  # requests_per_second, enabled_dynamic_requests, target_requests_per_second, reject_warning_threshold, log_interval_seconds,
+    global log_infos, settings
     log_infos.reset(json_datas)
     await asyncio.sleep(1)
     while not stop_signal.is_set():
@@ -310,12 +321,14 @@ async def main():
                 await asyncio.sleep(1 / settings.requests_per_second)
 
 
-def run():
+def run(debug=False):
     global cookies
     for _ in range(10):
         try:
             asyncio.run(main())
         except KeyboardInterrupt:
+            if debug:
+                raise KeyboardInterrupt
             logger.imp_info("脚本已停止")
             exit(0)
         except Exception as e:
@@ -325,18 +338,22 @@ def run():
                     continue
             except NameError:
                 pass
-            raise e
+            if debug:
+                raise e
+            logger.error(e)
+            logger.error("脚本遇到未知错误，重试。")
 
 
 __doc__ = """
 Usage:
     main.py
-    main.py [--verbose] [--recollect] 
+    main.py [--verbose] [--recollect] [--debug]
     main.py -h | --help
     main.py -V
 
 Options:
     -h --help           Show this screen.
+    --debug             Ctrl+C will raise KeyboardInterrupt, make it convenient to find where the error is.
     --verbose           Show more information.
     --recollect         Recollect courses.
     -V                  Show version information.
@@ -353,7 +370,7 @@ def entry_point():
             console_hd.setLevel(logging.INFO)
         if args["--recollect"]:
             collect.main()
-        run()
+        run(debug=args["--debug"])
 
 
 if __name__ == "__main__":
