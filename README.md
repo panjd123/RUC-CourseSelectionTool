@@ -132,6 +132,6 @@ A：`python /path/to/RUC-CourseSelectionTool/ruccourse/main.py`
 - 添加了抢到课，或欲强课程有名额但同类名额到达上限时的声音提示功能，可以在配置文件中打开，默认关闭
 - 增加了 `--debug` 参数，追踪报错信息
 
-## Star history
+## Star History
 
-![](https://star-history.com/#panjd123/RUC-CourseSelectionTool&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=panjd123/RUC-CourseSelectionTool&type=Date)](https://star-history.com/#panjd123/RUC-CourseSelectionTool&Date)
