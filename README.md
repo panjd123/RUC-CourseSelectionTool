@@ -3,14 +3,15 @@
 [![PyPI Downloads](https://img.shields.io/pypi/dm/ruccourse.svg?label=PyPI%20downloads)](
 https://pypi.org/project/ruccourse/) [![GitHub Repo stars](https://img.shields.io/github/stars/panjd123/RUC-CourseSelectionTool?label=Github%20stars)](https://github.com/panjd123/RUC-CourseSelectionTool) 
 
-**欢迎 Star！**
+**欢迎 Star！欢迎 pr！**
 
 适用：时间优先选课阶段（即本学期末，下学期初）
 
 支持：
 
-- 整点运行
 - 请求速度控制
+- 服务器运行
+- 整点运行
 - 自动重试
 - 自动停止
 
@@ -103,6 +104,14 @@ Q：怎么支持一上来就抢课？
 
 A：不支持，必须先抓包，一个可能的方法是提前抓包，下阶段抢课，但是实测参数不同，你可以试试。
 
+Q：服务器上怎么运行
+
+A：将本地的 json_datas.pkl 上传到服务器对应目录下，其他类似。
+
+Q：怎么当作脚本运行
+
+A：`python /path/to/RUC-CourseSelectionTool/ruccourse/main.py`
+
 ## 效果
 
 抢别人后阶段退的课，实际上这种名额挺多的，我抢过：
@@ -111,5 +120,14 @@ A：不支持，必须先抓包，一个可能的方法是提前抓包，下阶�
 - 素质拓展
 - 电影导论
 - 后人类时代的全球影像
+- 羽毛球
 
 这些课最初的中签率都在 10% 到 30% 之间。
+
+## Update
+
+### v0.1.4
+
+- 添加了对未知 errorCode 的处理
+- 添加了抢到课，或欲强课程有名额但同类名额到达上限时的声音提示功能，可以在配置文件中打开，默认关闭
+- 增加了 `--debug` 参数，追踪报错信息

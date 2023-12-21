@@ -1,6 +1,5 @@
 from ruclogin import *
 from datetime import datetime, timedelta
-from time import sleep
 import pickle
 import aiohttp
 import asyncio
@@ -9,6 +8,7 @@ from configparser import ConfigParser
 import logging
 import os
 import os.path as osp
+import simpleaudio as sa
 
 if __name__ == "__main__":  # 并不是一种优雅的写法，待改进
     import collect
@@ -22,6 +22,8 @@ log_path = osp.join(ROOT, "ruccourse.log")
 config_path = osp.join(ROOT, "config.ini")
 json_datas_path = osp.join(ROOT, "json_datas.pkl")
 collect_py_path = osp.join(ROOT, "collect.py")
+ring_path = osp.join(ROOT, "ring.wav")
+
 
 IMPORTANT_INFO = 25
 logging.addLevelName(IMPORTANT_INFO, "IMPORTANT_INFO")
@@ -44,6 +46,30 @@ console_hd.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(messa
 logger.addHandler(file_hd)
 logger.addHandler(console_hd)
 json_datas = []
+
+
+class Player(object):
+    def __init__(self, path, silent=False) -> None:
+        self.wave_obj = sa.WaveObject.from_wave_file(path)
+        self.play_obj = None
+        self.silent = silent
+
+    def play(self):
+        if self.silent:
+            return
+        print("playing")
+        if self.play_obj is not None:
+            self.play_obj.stop()
+        self.play_obj = self.wave_obj.play()
+
+    def is_playing(self):
+        if self.play_obj is None:
+            return False
+        return self.play_obj.is_playing()
+
+    def stop(self):
+        if self.play_obj is not None:
+            self.play_obj.stop()
 
 
 class Log_infomations(object):
@@ -103,6 +129,7 @@ class Settings(object):
             / len(json_datas)
         )
         self.gap = int(config["DEFAULT"]["gap"])
+        self.silent = config["DEFAULT"].getboolean("silent")
 
     def __str__(self) -> str:
         return f"enabled_dynamic_requests: {self.enabled_dynamic_requests}\ntarget_requests_per_second: {self.target_requests_per_second}\nrequests_per_second: {self.requests_per_second}\nreject_warning_threshold: {self.reject_warning_threshold}\nlog_interval_seconds: {self.log_interval_seconds}"
@@ -115,7 +142,7 @@ unknownErrorCode = set()
 
 
 async def grab(json_data):
-    global cookies, json_datas, log_infos, unknownErrorCode
+    global cookies, json_datas, log_infos, unknownErrorCode, player
     url = "https://jw.ruc.edu.cn/resService/jwxtpt/v1/xsd/stuCourseCenterController/saveStuXkByRmdx"
     params = {
         "resourceCode": "XSMH0303",
@@ -142,27 +169,30 @@ async def grab(json_data):
             if errorCode == "success":
                 logger.imp_info(f"抢到 {cls_name}")
                 json_datas.remove(json_data)
+                player.play()
                 del log_infos.course_info[json_data["ktmc_name"]]
             elif errorCode == "eywxt.save.msLimit.error":
                 logger.imp_info(f"{cls_name} 有名额，但同类别已选数目达到上限")
                 json_datas.remove(json_data)
+                player.play()
                 del log_infos.course_info[json_data["ktmc_name"]]
-            elif errorCode == "服务器繁忙，请稍后再试！":
+            elif (
+                errorCode == "服务器繁忙，请稍后再试！"
+                or errorCode == "正在准备数据，请稍后重试..."
+                or errorCode in unknownErrorCode
+            ):
                 log_infos.iter_reject_requests += 1
                 log_infos.course_info[cls_name]["reject"] += 1
             elif errorCode == "eywxt.save.cantXkByCopy.error":
                 logger.imp_info(f"{cls_name} 已选，跳过")
                 json_datas.remove(json_data)
                 del log_infos.course_info[json_data["ktmc_name"]]
-            elif errorCode in unknownErrorCode:
-                log_infos.iter_reject_requests += 1
-                log_infos.course_info[cls_name]["reject"] += 1
             elif errorCode != "eywxt.save.stuLimit.error":
                 unknownErrorCode.add(errorCode)
                 log_infos.iter_reject_requests += 1
                 log_infos.course_info[cls_name]["reject"] += 1
                 logger.warning(
-                    f"未知 errCode: {errorCode}，请联系开发人员。将视该 errorCode 为服务器拒绝响应，请自行判断是否会影响抢课。"
+                    f"未知 errCode：{errorCode}，请联系开发人员。将视该 errorCode 为服务器拒绝响应，请自行判断是否会影响抢课。"
                 )
             if len(json_datas) == 0:
                 logger.imp_info("抢课列表为空")
@@ -235,7 +265,7 @@ async def log(stop_signal):
 
 
 async def main():
-    global json_datas, cookies, log_infos, settings
+    global json_datas, cookies, log_infos, settings, player
 
     logger.imp_info("脚本开始运行")
     logger.imp_info(f"加载配置文件 {config_path}")
@@ -287,6 +317,7 @@ async def main():
         logger.imp_info(f"gap={settings.gap}，脚本将在每个小时的整{settings.gap}分钟执行")
 
     log_infos = Log_infomations(json_datas)
+    player = Player(ring_path, silent=settings.silent)
 
     cookies = get_cookies(domain="jw")
     stop_signal = asyncio.Event()
@@ -329,6 +360,7 @@ def run(debug=False):
         except KeyboardInterrupt:
             if debug:
                 raise KeyboardInterrupt
+            logger.info(e)
             logger.imp_info("脚本已停止")
             exit(0)
         except Exception as e:
