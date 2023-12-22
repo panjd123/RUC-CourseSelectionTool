@@ -2,19 +2,20 @@ from setuptools import setup, find_packages
 
 setup(
     name="ruccourse",
-    version="0.1.4",
+    version="0.1.5",
     packages=find_packages(),
     description="A tool for RUC students to select courses.",
     long_description=open("README.md", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
     author="panjd123",
-    author_email="xm.jarden@gmail.con",
+    author_email="xm.jarden@gmail.com",
     license="MIT",
     url="https://github.com/panjd123/RUC-CourseSelectionTool",
     install_requires=[
         "ruclogin",
         "aiohttp",
         "simpleaudio",
+        "docopt",
     ],
     package_data={
         "ruccourse": [

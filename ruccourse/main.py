@@ -163,9 +163,6 @@ async def grab(json_data):
             result = await response.json()
             errorCode = result["errorCode"]
             cls_name = json_data["ktmc_name"]
-            "eywxt.save.stuLimit.error"  # 选课人数已满
-            "eywxt.save.msLimit.error"  # 本身有剩余名额，但同类别已选数目达到上限
-            "服务器繁忙，请稍后再试！"  # 服务器繁忙，请稍后再试！
             if errorCode == "success":
                 logger.imp_info(f"抢到 {cls_name}")
                 json_datas.remove(json_data)
@@ -179,8 +176,10 @@ async def grab(json_data):
             elif (
                 errorCode == "服务器繁忙，请稍后再试！"
                 or errorCode == "正在准备数据，请稍后重试..."
+                or errorCode == "选课已结束！"
                 or errorCode in unknownErrorCode
             ):
+                logger.debug(f"{cls_name} 服务器拒绝响应，errorCode：{errorCode}")
                 log_infos.iter_reject_requests += 1
                 log_infos.course_info[cls_name]["reject"] += 1
             elif errorCode == "eywxt.save.cantXkByCopy.error":
@@ -232,9 +231,12 @@ async def log(stop_signal):
             worst_reqs < settings.reject_warning_threshold
             and log_infos.toc - log_infos.tic > 5
         ):
-            logger.warning(
-                f"{str(round(rej_ratio*100,2))+'%':<5} 的请求被拒绝，真实请求速度为 {round(tru_reqs,2):<5} req/s，其中最低请求速度的课程为 {round(worst_reqs,2):<5} req/s"
-            )
+            if log_infos.iter_reject_requests == log_infos.iter_requests:
+                logger.warning(f"所有请求被拒绝，请检查是否处于选课时间")
+            else:
+                logger.warning(
+                    f"{str(round(rej_ratio*100,2))+'%':<5} 的请求被拒绝，真实请求速度为 {round(tru_reqs,2):<5} req/s，其中最低请求速度的课程为 {round(worst_reqs,2):<5} req/s"
+                )
 
         logger.info(
             f"req/s: {round(reqs, 2):<5}\ttru_reqs/s: {round(tru_reqs,2):<5}\ttotal: {log_infos.total_requests}"
@@ -298,18 +300,18 @@ async def main():
     for json_data in json_datas:
         logger.imp_info(f"待抢课程：{json_data['ktmc_name']}")
 
-    if settings.enabled_dynamic_requests and settings.target_requests_per_second > 30:
-        logger.warning(
-            f"动态调整对请求速度过高的情况（{settings.target_requests_per_second }> 30）不适用，请自行查看日志确认速率是否符合要求"
-        )
-        settings.enabled_dynamic_requests = False
-
     if settings.target_requests_per_second > 100:
         logger.error(
             f"请求速度过高（{settings.target_requests_per_second }> 100）会导致意料外的问题，同时会给服务器正常运行带来压力，如果你清楚你在做什么，请自行修改源代码"
         )
         logger.imp_info("脚本已停止")
         exit(1)
+
+    if settings.enabled_dynamic_requests and settings.target_requests_per_second > 30:
+        logger.warning(
+            f"动态调整对请求速度过高的情况（{settings.target_requests_per_second }> 30）不适用，请自行查看日志确认速率是否符合要求"
+        )
+        settings.enabled_dynamic_requests = False
 
     if settings.gap == 0:
         logger.imp_info("gap=0，脚本将不间断执行")
@@ -333,7 +335,7 @@ async def main():
             if wait_time > 0 and wait_time < settings.gap * 60 - 30:
                 stop_signal.set()
                 logger.info(
-                    "wait, until " + str(current + timedelta(seconds=wait_time))
+                    "等待中，下次启动时间为：" + str(current + timedelta(seconds=wait_time))
                 )
                 while wait_time > 5:
                     if not check_cookies(cookies, domain="jw"):
@@ -388,18 +390,20 @@ Options:
     --debug             Ctrl+C will raise KeyboardInterrupt, make it convenient to find where the error is.
     --verbose           Show more information.
     --recollect         Recollect courses.
-    -V                  Show version information.
+    -V                  Show information.
 """
 
 
 def entry_point():
-    args = docopt(__doc__, version="0.1.0")
+    args = docopt(__doc__, version="0.1.5")
     if args["-V"]:
         print(f"配置文件路径：{config_path}")
         print(f"日志输出到 {log_path}")
     else:
         if args["--verbose"]:
             console_hd.setLevel(logging.INFO)
+        if args["--debug"]:
+            console_hd.setLevel(logging.DEBUG)
         if args["--recollect"]:
             collect.main()
         run(debug=args["--debug"])
