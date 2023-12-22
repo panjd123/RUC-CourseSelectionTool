@@ -25,7 +25,7 @@ ruccourse --verbose
 
 > 关于 ruclogin 这个包，你可以查看 [ruclogin](https://github.com/panjd123/ruclogin) 的具体文档。
 
-像这样
+像这样，请注意，密码的输入不带回显（即不显示你输入的内容），你只需要直接输入，然后回车。
 
 ```
 (base) PS D:\Code\RUC-CourseSelectionTool> pip install ruccourse
@@ -33,13 +33,13 @@ ruccourse --verbose
 
 (base) PS D:\Code\ruclogin> ruclogin     
 username, type enter to skip: 2021201212
-password, type enter to skip: ABC12345
+password, type enter to skip: 
 browser(Chrome/Edge/Chromium), type enter to skip:
 driver_path, type enter to skip:
 
 Config D:\Program\anaconda3\Lib\site-packages\ruclogin\config.ini updated:
         Username: 2021201212
-        Password: ABC12345
+        Password: ******
         Browser: Chrome
         driver_path: D:/Other/driver/chromedriver.exe
 
@@ -123,6 +123,10 @@ A：`python /path/to/RUC-CourseSelectionTool/ruccourse/main.py`
 - 羽毛球
 
 这些课最初的中签率都在 10% 到 30% 之间。
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=panjd123/RUC-CourseSelectionTool&type=Date)](https://star-history.com/#panjd123/RUC-CourseSelectionTool&Date)
 
 ## Update
 
