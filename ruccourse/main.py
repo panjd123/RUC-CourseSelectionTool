@@ -109,6 +109,8 @@ class Settings(object):
     reject_warning_threshold: float
     log_interval_seconds: int
     gap: int
+    silent: bool
+    share: bool
 
     def __init__(self, config_path, json_datas) -> None:
         config = ConfigParser()
@@ -130,6 +132,7 @@ class Settings(object):
         )
         self.gap = int(config["DEFAULT"]["gap"])
         self.silent = config["DEFAULT"].getboolean("silent")
+        self.share = config["DEFAULT"].getboolean("share")
 
     def __str__(self) -> str:
         return f"enabled_dynamic_requests: {self.enabled_dynamic_requests}\ntarget_requests_per_second: {self.target_requests_per_second}\nrequests_per_second: {self.requests_per_second}\nreject_warning_threshold: {self.reject_warning_threshold}\nlog_interval_seconds: {self.log_interval_seconds}"
@@ -139,6 +142,32 @@ class Settings(object):
 
 
 unknownErrorCode = set()
+
+
+async def success_report():
+    try:
+        global settings
+        if settings.share:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    f"https://ruccourse.panjd.net/success_report?count=1"
+                ) as response:
+                    pass
+    except NameError:
+        pass
+
+
+async def request_report():
+    try:
+        global log_infos, settings
+        if settings.share:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    f"https://ruccourse.panjd.net/request_report?count={log_infos.total_requests}"
+                ) as response:
+                    pass
+    except NameError:
+        pass
 
 
 async def grab(json_data):
@@ -164,6 +193,7 @@ async def grab(json_data):
             errorCode = result["errorCode"]
             cls_name = json_data["ktmc_name"]
             if errorCode == "success":
+                asyncio.create_task(success_report())
                 logger.imp_info(f"抢到 {cls_name}")
                 json_datas.remove(json_data)
                 player.play()
@@ -193,10 +223,6 @@ async def grab(json_data):
                 logger.warning(
                     f"未知 errCode：{errorCode}，请联系开发人员。将视该 errorCode 为服务器拒绝响应，请自行判断是否会影响抢课。"
                 )
-            if len(json_datas) == 0:
-                logger.imp_info("抢课列表为空")
-                logger.imp_info("脚本已停止")
-                exit(0)
             log_infos.course_info[cls_name]["total"] += 1
             log_infos.total_requests += 1
             log_infos.iter_requests += 1
@@ -281,7 +307,9 @@ async def main():
             raise ValueError
     except Exception as e:
         logger.error("抢课列表为空")
-        collect_now = input("你需要先手动选择要抢的课，是否现在开始选择（请确保你已经正确配置好 ruclogin） Y/n：")
+        collect_now = input(
+            "你需要先手动选择要抢的课，是否现在开始选择（请确保你已经正确配置好 ruclogin） Y/n："
+        )
         if collect_now.lower().startswith("y") or collect_now == "":
             json_datas = collect.main()
             if len(json_datas) == 0:
@@ -305,6 +333,7 @@ async def main():
             f"请求速度过高（{settings.target_requests_per_second }> 100）会导致意料外的问题，同时会给服务器正常运行带来压力，如果你清楚你在做什么，请自行修改源代码"
         )
         logger.imp_info("脚本已停止")
+        request_report()
         exit(1)
 
     if settings.enabled_dynamic_requests and settings.target_requests_per_second > 30:
@@ -316,7 +345,9 @@ async def main():
     if settings.gap == 0:
         logger.imp_info("gap=0，脚本将不间断执行")
     else:
-        logger.imp_info(f"gap={settings.gap}，脚本将在每个小时的整{settings.gap}分钟执行")
+        logger.imp_info(
+            f"gap={settings.gap}，脚本将在每个小时的整{settings.gap}分钟执行"
+        )
 
     log_infos = Log_infomations(json_datas)
     player = Player(ring_path, silent=settings.silent)
@@ -335,7 +366,8 @@ async def main():
             if wait_time > 0 and wait_time < settings.gap * 60 - 30:
                 stop_signal.set()
                 logger.info(
-                    "等待中，下次启动时间为：" + str(current + timedelta(seconds=wait_time))
+                    "等待中，下次启动时间为："
+                    + str(current + timedelta(seconds=wait_time))
                 )
                 while wait_time > 5:
                     if not check_cookies(cookies, domain="jw"):
@@ -352,6 +384,11 @@ async def main():
             for json_data in json_datas:
                 asyncio.create_task(grab(json_data))
                 await asyncio.sleep(1 / settings.requests_per_second)
+            if len(json_datas) == 0:
+                logger.imp_info("抢课列表为空")
+                logger.imp_info("脚本已停止")
+                await request_report()
+                exit(0)
 
 
 def run(debug=False):
@@ -360,9 +397,9 @@ def run(debug=False):
         try:
             asyncio.run(main())
         except KeyboardInterrupt:
+            asyncio.run(request_report())
             if debug:
                 raise KeyboardInterrupt
-            logger.info(e)
             logger.imp_info("脚本已停止")
             exit(0)
         except Exception as e:
@@ -372,6 +409,7 @@ def run(debug=False):
                     continue
             except NameError:
                 pass
+            asyncio.run(request_report())
             if debug:
                 raise e
             logger.error(e)
