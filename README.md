@@ -136,7 +136,7 @@ A: 你可以尝试 `ruccourse --debug` 以抛出错误，在这之前，你或�
 
 ### 0.1.6
 
-- 默认分享网络请求次数到 ruccourse.panjd.net 用以追踪脚本被滥用的情况（不涉及个人账户信息），如果你对相关隐私有所顾虑，可以在配置文件中关闭或者退回到 0.1.5 版本
+- 为了避免这个脚本产生过大的影响，默认分享网络请求次数到 ruccourse.panjd.net 用以追踪脚本被滥用的情况（不涉及个人账户信息），如果你对相关隐私有所顾虑，可以在配置文件中关闭或者退回到 0.1.5 版本，你可以到 [RUC-CourseSelectionTool-stats](https://github.com/panjd123/RUC-CourseSelectionTool-stats) 查看服务端源代码
 - 修复不能正常自动结束的问题
 - ruclogin 已经适配最新教务网站
 
