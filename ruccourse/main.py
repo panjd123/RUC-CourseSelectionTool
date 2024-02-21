@@ -57,7 +57,6 @@ class Player(object):
     def play(self):
         if self.silent:
             return
-        print("playing")
         if self.play_obj is not None:
             self.play_obj.stop()
         self.play_obj = self.wave_obj.play()
@@ -142,13 +141,16 @@ class Settings(object):
 
 
 unknownErrorCode = set()
+processedClasses = set()
 
 
 async def success_report():
     try:
         global settings
         if settings.share:
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(
+                connector=aiohttp.TCPConnector(ssl=False)
+            ) as session:
                 async with session.get(
                     f"https://ruccourse.panjd.net/success_report?count=1"
                 ) as response:
@@ -161,7 +163,9 @@ async def request_report():
     try:
         global log_infos, settings
         if settings.share:
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(
+                connector=aiohttp.TCPConnector(ssl=False)
+            ) as session:
                 async with session.get(
                     f"https://ruccourse.panjd.net/request_report?count={log_infos.total_requests}"
                 ) as response:
@@ -194,12 +198,16 @@ async def grab(json_data):
             cls_name = json_data["ktmc_name"]
             if errorCode == "success":
                 asyncio.create_task(success_report())
-                logger.imp_info(f"抢到 {cls_name}")
+                if cls_name not in processedClasses:
+                    logger.imp_info(f"抢到 {cls_name}")
+                    processedClasses.add(cls_name)
                 json_datas.remove(json_data)
                 player.play()
                 del log_infos.course_info[json_data["ktmc_name"]]
             elif errorCode == "eywxt.save.msLimit.error":
-                logger.imp_info(f"{cls_name} 有名额，但同类别已选数目达到上限")
+                if cls_name not in processedClasses:
+                    logger.imp_info(f"{cls_name} 有名额，但同类别已选数目达到上限")
+                    processedClasses.add(cls_name)
                 json_datas.remove(json_data)
                 player.play()
                 del log_infos.course_info[json_data["ktmc_name"]]
@@ -213,7 +221,9 @@ async def grab(json_data):
                 log_infos.iter_reject_requests += 1
                 log_infos.course_info[cls_name]["reject"] += 1
             elif errorCode == "eywxt.save.cantXkByCopy.error":
-                logger.imp_info(f"{cls_name} 已选，跳过")
+                if cls_name not in processedClasses:
+                    logger.imp_info(f"{cls_name} 已选，跳过")
+                    processedClasses.add(cls_name)
                 json_datas.remove(json_data)
                 del log_infos.course_info[json_data["ktmc_name"]]
             elif errorCode != "eywxt.save.stuLimit.error":
@@ -296,8 +306,8 @@ async def main():
     global json_datas, cookies, log_infos, settings, player
 
     logger.imp_info("脚本开始运行")
-    logger.imp_info(f"加载配置文件 {config_path}")
-    logger.imp_info(f"日志输出到 {log_path}")
+    logger.imp_info(f"配置文件路径：{config_path}")
+    logger.imp_info(f"日志文件路径：{log_path}")
 
     try:
         if not os.path.exists(json_datas_path):
@@ -321,6 +331,12 @@ async def main():
             exit(1)
 
     settings = Settings(config_path, json_datas)
+
+    if settings.silent:
+        logger.imp_info(f"不启用提示铃声（如果有需要，你可以替换铃声文件）")
+    else:
+        logger.imp_info(f"启用提示铃声（如果有需要，你可以替换铃声文件）")
+    logger.imp_info(f"铃声文件路径：{ring_path}")
 
     semester_code = json_datas[0]["jczy013id"]
     logger.imp_info(f"学期：{code2semester(semester_code)}")
@@ -436,7 +452,8 @@ def entry_point():
     args = docopt(__doc__, version="0.1.5")
     if args["-V"]:
         print(f"配置文件路径：{config_path}")
-        print(f"日志输出到 {log_path}")
+        print(f"日志文件路径：{log_path}")
+        print(f"铃声文件路径：{ring_path}")
     else:
         if args["--verbose"]:
             console_hd.setLevel(logging.INFO)

@@ -68,7 +68,7 @@ jw.ruc.edu.cn get cookies time: 1.925s, check cookies time: 0.395s
 2023-12-20 17:10:26,580 - INFO - req/s: 17.621  tru_reqs/s: 15.663      total: 18
 2023-12-20 17:10:27,571 - INFO - req/s: 21.356  tru_reqs/s: 20.362      total: 43
 2023-12-20 17:10:28,588 - INFO - req/s: 22.442  tru_reqs/s: 20.792      total: 68
-2023-12-20 17:10:28,519 - IMPORTANT_INFO - 抢到 信息检索导论01班
+2023-12-20 17:10:28,689 - IMPORTANT_INFO - 抢到 信息检索导论01班
 2023-12-20 17:10:28,919 - IMPORTANT_INFO - 脚本已停止
 ```
 
@@ -80,9 +80,13 @@ jw.ruc.edu.cn get cookies time: 1.925s, check cookies time: 0.395s
 
 ## Q&A
 
-Q：如何更新抢课列表？
+Q：如何更新抢课列表，或者说想抢别的课？
 
 A：`ruccouse --recollect`
+
+Q: 怎么检验抢课脚本的效果？
+
+A: 你可以 `ruccourse --recollect` 重新选一次课，并选择还有名额的课，同时在关闭浏览器前手动退选这门课。此时关闭浏览器，脚本开始运行，你应该会看到其显示抢课成功，同时教务处网站也会显示你抢到了这门课。
 
 Q：运行原理？
 
@@ -114,7 +118,7 @@ A：`python /path/to/RUC-CourseSelectionTool/ruccourse/main.py`
 
 Q: 遇到了其他报错。
 
-A: 你可以尝试 `ruccourse --debug` 以抛出错误，在这之前，你或许需要先尝试 `ruclogin --debug` 排除获取 cookies 阶段的问题。
+A: 你可以尝试 `ruccourse --debug` 以抛出错误，在这之前，你或许需要先尝试 `ruclogin --debug` 排除获取 cookies 阶段的问题。如果你无法解决这个问题，可以提交 Issue。
 
 ## 效果
 
@@ -134,9 +138,14 @@ A: 你可以尝试 `ruccourse --debug` 以抛出错误，在这之前，你或�
 
 ## Update
 
+### 0.1.7
+
+- 优化了提示信息
+- 修复了不能正常访问 [ruccourse.panjd.net](ruccourse.panjd.net) 的问题
+
 ### 0.1.6
 
-- 为了避免这个脚本产生过大的影响，默认分享网络请求次数到 ruccourse.panjd.net 用以追踪脚本被滥用的情况（不涉及个人账户信息），如果你对相关隐私有所顾虑，可以在配置文件中关闭或者退回到 0.1.5 版本，你可以到 [RUC-CourseSelectionTool-stats](https://github.com/panjd123/RUC-CourseSelectionTool-stats) 查看服务端源代码
+- 为了避免这个脚本产生过大的影响，默认分享网络请求次数到 [ruccourse.panjd.net](ruccourse.panjd.net) 用以追踪脚本被滥用的情况（不涉及个人账户信息），如果你对相关隐私有所顾虑，可以在配置文件中关闭或者退回到 0.1.5 版本，你可以到 [RUC-CourseSelectionTool-stats](https://github.com/panjd123/RUC-CourseSelectionTool-stats) 查看服务端源代码
 - 修复不能正常自动结束的问题
 - ruclogin 已经适配最新教务网站
 
