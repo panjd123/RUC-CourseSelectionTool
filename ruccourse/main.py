@@ -9,7 +9,22 @@ from datetime import datetime, timedelta
 from timeit import default_timer as timer
 
 import aiohttp
-import simpleaudio as sa
+
+try:
+    from simpleaudio import WaveObject
+
+except ImportError:
+
+    class WaveObject:
+        @classmethod
+        def from_wave_file(cls, *args, **kwargs):
+            global logger
+            logger.warning(
+                "simpleaudio 未安装，无法播放提示音，你可以通过 pip install simpleaudio 避免这个警告"
+            )
+            return None
+
+
 from docopt import docopt
 from ruclogin import *
 
@@ -54,7 +69,7 @@ json_datas = []
 
 class Player(object):
     def __init__(self, path, silent=False) -> None:
-        self.wave_obj = sa.WaveObject.from_wave_file(path)
+        self.wave_obj = WaveObject.from_wave_file(path)
         self.play_obj = None
         self.silent = silent
 
@@ -63,7 +78,8 @@ class Player(object):
             return
         if self.play_obj is not None:
             self.play_obj.stop()
-        self.play_obj = self.wave_obj.play()
+        if self.wave_obj is not None:
+            self.play_obj = self.wave_obj.play()
 
     def is_playing(self):
         if self.play_obj is None:
@@ -354,6 +370,7 @@ async def main():
             exit(1)
 
     settings = Settings(CONFIG_PATH, json_datas)
+    player = Player(RING_PATH, silent=settings.silent)
 
     if settings.silent:
         logger.imp_info(f"不启用提示铃声（如果有需要，你可以替换铃声文件）")
@@ -389,7 +406,6 @@ async def main():
         )
 
     log_infos = Log_infomations(json_datas)
-    player = Player(RING_PATH, silent=settings.silent)
 
     cookies = get_cookies(domain="jw")
     stop_signal = asyncio.Event()
