@@ -1,18 +1,20 @@
-from ruclogin import RUC_LOGIN
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import (
-    ElementClickInterceptedException,
-    WebDriverException,
-)
-import pickle
 import os.path as osp
+from json import dumps, loads
+
+from ruclogin import RUC_LOGIN
+from selenium.common.exceptions import (ElementClickInterceptedException,
+                                        WebDriverException)
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
+
+ROOT = osp.dirname(osp.abspath(__file__))
+
+old_pkl_path = osp.join(ROOT, "json_datas.pkl")
+COURSES_PATH = osp.join(ROOT, "courses.json")
 
 
-def main():
-    ROOT = osp.dirname(osp.abspath(__file__))
-
+def collect_courses():
     input("请等待脚本输出“等待浏览器被关闭...”后，再开始选择课程，选择后关闭浏览器。按回车键继续...")
     login = RUC_LOGIN(debug=True)
     login.initial_login("jw")
@@ -54,21 +56,29 @@ def main():
     while True:
         try:
             driver.current_url
-        except WebDriverException as e:
+        except WebDriverException:
             json_datas = []
             for request in driver.requests:
                 if request.path.endswith("saveStuXkByRmdx"):
                     data = request.body.decode("utf-8")
-                    data = data.replace("null", "None")
-                    data = data.replace("false", "False")
-                    data = data.replace("true", "True")
-                    d = eval(data)
+                    d = loads(data)
                     json_datas.append(d)
-            pickle.dump(json_datas, open(osp.join(ROOT, "json_datas.pkl"), "wb"))
-            print("你选择的课程是：", " ".join([data["ktmc_name"] for data in json_datas]))
+            with open(COURSES_PATH, "w") as f:
+                f.write(dumps(json_datas, ensure_ascii=False, indent=4))
+            print("你选择的课程是：", " ".join(
+                [data["ktmc_name"] for data in json_datas]))
             return json_datas
         driver.implicitly_wait(0.1)
 
 
+def migrate_old_pkl():
+    import pickle
+    with open(old_pkl_path, "rb") as f:
+        data = pickle.load(f)
+    with open(COURSES_PATH, "w", encoding='utf-8') as f:
+        f.write(dumps(data, ensure_ascii=False, indent=4))
+    return data
+
+
 if __name__ == "__main__":
-    main()
+    collect_courses()

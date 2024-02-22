@@ -1,26 +1,30 @@
-from ruclogin import *
-from datetime import datetime, timedelta
-import pickle
-import aiohttp
 import asyncio
-from timeit import default_timer as timer
-from configparser import ConfigParser
 import logging
 import os
 import os.path as osp
+import pickle
+import sys
+from configparser import ConfigParser
+from datetime import datetime, timedelta
+from timeit import default_timer as timer
+
+import aiohttp
 import simpleaudio as sa
+from docopt import docopt
+from ruclogin import *
 
 if __name__ == "__main__":  # 并不是一种优雅的写法，待改进
     import collect
 else:
     from . import collect
 
-from docopt import docopt
-
 ROOT = osp.dirname(osp.abspath(__file__))
+
+
 log_path = osp.join(ROOT, "ruccourse.log")
 config_path = osp.join(ROOT, "config.ini")
-json_datas_path = osp.join(ROOT, "json_datas.pkl")
+old_pkl_path = osp.join(ROOT, "json_datas.pkl")
+COURSES_PATH = osp.join(ROOT, "courses.json")
 collect_py_path = osp.join(ROOT, "collect.py")
 ring_path = osp.join(ROOT, "ring.wav")
 
@@ -39,10 +43,12 @@ logging.Logger.imp_info = imp_info
 logger.setLevel(logging.INFO)
 file_hd = logging.FileHandler(log_path, mode="a", encoding="utf-8")
 file_hd.setLevel(logging.INFO)
-file_hd.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+file_hd.setFormatter(logging.Formatter(
+    "%(asctime)s - %(levelname)s - %(message)s"))
 console_hd = logging.StreamHandler()
 console_hd.setLevel(IMPORTANT_INFO)
-console_hd.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+console_hd.setFormatter(logging.Formatter(
+    "%(asctime)s - %(levelname)s - %(message)s"))
 logger.addHandler(file_hd)
 logger.addHandler(console_hd)
 json_datas = []
@@ -118,12 +124,14 @@ class Settings(object):
         self.enabled_dynamic_requests = config["DEFAULT"].getboolean(
             "enabled_dynamic_requests"
         )
-        self.target_requests_per_second = int(config["DEFAULT"]["requests_per_second"])
+        self.target_requests_per_second = int(
+            config["DEFAULT"]["requests_per_second"])
         self.requests_per_second = self.target_requests_per_second
         self.reject_warning_threshold = float(
             config["DEFAULT"]["reject_warning_threshold"]
         )
-        self.log_interval_seconds = int(config["DEFAULT"]["log_interval_seconds"])
+        self.log_interval_seconds = int(
+            config["DEFAULT"]["log_interval_seconds"])
         self.reject_warning_threshold = (
             self.reject_warning_threshold
             * self.target_requests_per_second
@@ -307,21 +315,24 @@ async def main():
 
     logger.imp_info("脚本开始运行")
     logger.imp_info(f"配置文件路径：{config_path}")
+    logger.imp_info(f"抢课列表路径：{COURSES_PATH}")
     logger.imp_info(f"日志文件路径：{log_path}")
 
     try:
-        if not os.path.exists(json_datas_path):
+        print("正在尝试读取旧的 pkl 文件")
+        print(old_pkl_path)
+        if not os.path.exists(old_pkl_path):
             raise ValueError
-        json_datas = pickle.load(open(json_datas_path, "rb"))
+        json_datas = collect.migrate_old_pkl()
         if len(json_datas) == 0:
             raise ValueError
-    except Exception as e:
+    except Exception:
         logger.error("抢课列表为空")
         collect_now = input(
             "你需要先手动选择要抢的课，是否现在开始选择（请确保你已经正确配置好 ruclogin） Y/n："
         )
         if collect_now.lower().startswith("y") or collect_now == "":
-            json_datas = collect.main()
+            json_datas = collect.collect_courses()
             if len(json_datas) == 0:
                 logger.error("抢课列表为空")
                 logger.imp_info("脚本已停止")
@@ -379,7 +390,7 @@ async def main():
             next_sec = 45 - current.second
             wait_time = next_min * 60 + next_sec
 
-            if wait_time > 0 and wait_time < settings.gap * 60 - 30:
+            if 0 < wait_time < settings.gap * 60 - 30:
                 stop_signal.set()
                 logger.info(
                     "等待中，下次启动时间为："
@@ -412,12 +423,12 @@ def run(debug=False):
     for _ in range(10):
         try:
             asyncio.run(main())
-        except KeyboardInterrupt:
+        except KeyboardInterrupt as esc:
             asyncio.run(request_report())
             if debug:
-                raise KeyboardInterrupt
+                raise KeyboardInterrupt from esc
             logger.imp_info("脚本已停止")
-            exit(0)
+            sys.exit(0)
         except Exception as e:
             try:
                 if not check_cookies(cookies, domain="jw"):
@@ -452,6 +463,7 @@ def entry_point():
     args = docopt(__doc__, version="0.1.5")
     if args["-V"]:
         print(f"配置文件路径：{config_path}")
+        print(f"抢课列表路径：{COURSES_PATH}")
         print(f"日志文件路径：{log_path}")
         print(f"铃声文件路径：{ring_path}")
     else:
@@ -460,7 +472,7 @@ def entry_point():
         if args["--debug"]:
             console_hd.setLevel(logging.DEBUG)
         if args["--recollect"]:
-            collect.main()
+            collect.collect_courses()
         run(debug=args["--debug"])
 
 
