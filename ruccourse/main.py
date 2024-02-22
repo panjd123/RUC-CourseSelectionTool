@@ -343,8 +343,7 @@ async def main():
     logger.imp_info(f"日志文件路径：{LOG_PATH}")
 
     try:
-        print("正在尝试读取旧的 pkl 文件")
-        print(OLD_PKL_PATH)
+        logger.imp_info(f"正在尝试读取旧的配置文件: {OLD_PKL_PATH}")
 
         if os.path.exists(COURSES_PATH):
             with open(COURSES_PATH, "r") as f:

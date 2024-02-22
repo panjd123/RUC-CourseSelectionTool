@@ -77,6 +77,7 @@ jw.ruc.edu.cn get cookies time: 1.925s, check cookies time: 0.395s
 - 见 `ruccourse --help`
 - 默认情况下（即不加 `--verbose` 参数时）抢到课或同类别选满会输出到控制台，速度监控会输出到文件，这样你可以一眼看出有没有抢到课
 - 配置文件中包含更多可设置量
+- 如果你需要抢课铃声提示功能，请手动 `pip install simpleaudio`，然后在配置文件中修改 `silent` 项
 
 ## Remind
 
