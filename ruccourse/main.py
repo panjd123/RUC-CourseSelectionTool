@@ -263,7 +263,7 @@ async def log(stop_signal):
         )
         rej_ratio = log_infos.iter_reject_requests / log_infos.iter_requests
 
-        worst_reqs = 100000
+        worst_reqs = float("inf")
         for cls_name in log_infos.course_info.keys():
             if log_infos.course_info[cls_name]["total"] != 0:
                 worst_reqs = min(
