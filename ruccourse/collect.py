@@ -1,3 +1,4 @@
+import os
 import os.path as osp
 from json import dumps, loads
 
@@ -72,11 +73,21 @@ def collect_courses():
 
 
 def migrate_old_pkl():
-    import pickle
-    with open(old_pkl_path, "rb") as f:
-        data = pickle.load(f)
-    with open(COURSES_PATH, "w", encoding='utf-8') as f:
-        f.write(dumps(data, ensure_ascii=False, indent=4))
+    try:
+        import pickle
+        with open(old_pkl_path, "rb") as f:
+            data = pickle.load(f)
+        with open(COURSES_PATH, "w", encoding='utf-8') as f:
+            f.write(dumps(data, ensure_ascii=False, indent=4))
+    except FileNotFoundError:
+        return None
+
+    # remove old pkl file
+    try:
+        os.remove(old_pkl_path)
+    except FileNotFoundError:
+        pass
+
     return data
 
 
