@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import os
 import os.path as osp
@@ -321,9 +322,13 @@ async def main():
     try:
         print("正在尝试读取旧的 pkl 文件")
         print(old_pkl_path)
-        if not os.path.exists(old_pkl_path):
-            raise ValueError
-        json_datas = collect.migrate_old_pkl()
+
+        if os.path.exists(COURSES_PATH):
+            with open(COURSES_PATH, "r") as f:
+                json_datas = json.loads(f.read())
+        elif os.path.exists(old_pkl_path):
+            json_datas = collect.migrate_old_pkl()
+
         if len(json_datas) == 0:
             raise ValueError
     except Exception:
