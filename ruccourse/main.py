@@ -263,6 +263,7 @@ async def grab(json_data):
                 logger.warning(
                     f"未知 errCode：{errorCode}，将视该 errorCode 为服务器拒绝响应，请根据请求速度判断是否会影响抢课。"
                 )
+                logger.debug(f"unknown response: {result}")
             log_infos.update(cls_name, errorCode)
             return [cls_name, errorCode]
 
@@ -497,6 +498,7 @@ def entry_point():
         if args["--verbose"]:
             console_hd.setLevel(logging.INFO)
         if args["--debug"]:
+            file_hd.setLevel(logging.DEBUG)
             console_hd.setLevel(logging.DEBUG)
         if args["--recollect"]:
             collect.collect_courses()
