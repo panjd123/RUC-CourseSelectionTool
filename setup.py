@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="ruccourse",
-    version="0.1.7",
+    version="0.1.8",
     packages=find_packages(),
     description="A tool for RUC students to select courses.",
     long_description=open("README.md", encoding="utf-8").read(),
@@ -14,13 +14,13 @@ setup(
     install_requires=[
         "ruclogin",
         "aiohttp",
-        "simpleaudio",
         "docopt",
     ],
     package_data={
         "ruccourse": [
             "config.ini",
             "json_datas.pkl",
+            "courses.json",
             "ruccourse.log",
             "ring.wav",
         ]

@@ -1,28 +1,48 @@
-from ruclogin import *
-from datetime import datetime, timedelta
-import pickle
-import aiohttp
 import asyncio
-from timeit import default_timer as timer
-from configparser import ConfigParser
+import json
 import logging
 import os
 import os.path as osp
-import simpleaudio as sa
+from datetime import datetime, timedelta
+from timeit import default_timer as timer
+
+import aiohttp
+
+from docopt import docopt
+from ruclogin import *
 
 if __name__ == "__main__":  # 并不是一种优雅的写法，待改进
     import collect
+    from settings import Settings
 else:
     from . import collect
-
-from docopt import docopt
+    from .settings import Settings
 
 ROOT = osp.dirname(osp.abspath(__file__))
-log_path = osp.join(ROOT, "ruccourse.log")
-config_path = osp.join(ROOT, "config.ini")
-json_datas_path = osp.join(ROOT, "json_datas.pkl")
-collect_py_path = osp.join(ROOT, "collect.py")
-ring_path = osp.join(ROOT, "ring.wav")
+
+
+LOG_PATH = osp.join(ROOT, "ruccourse.log")
+CONFIG_PATH = osp.join(ROOT, "config.ini")
+OLD_PKL_PATH = osp.join(ROOT, "json_datas.pkl")
+COURSES_PATH = osp.join(ROOT, "courses.json")
+RING_PATH = osp.join(ROOT, "ring.wav")
+
+settings = Settings(CONFIG_PATH)
+
+try:
+    from simpleaudio import WaveObject
+
+except ImportError:
+
+    class WaveObject:
+        @classmethod
+        def from_wave_file(cls, *args, **kwargs):
+            global logger
+            if not settings.silent:
+                logger.error(
+                    "simpleaudio 未安装，无法播放提示音，请 pip install simpleaudio"
+                )
+            return None
 
 
 IMPORTANT_INFO = 25
@@ -37,7 +57,7 @@ def imp_info(self, message, *args, **kwargs):
 
 logging.Logger.imp_info = imp_info
 logger.setLevel(logging.INFO)
-file_hd = logging.FileHandler(log_path, mode="a", encoding="utf-8")
+file_hd = logging.FileHandler(LOG_PATH, mode="a", encoding="utf-8")
 file_hd.setLevel(logging.INFO)
 file_hd.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
 console_hd = logging.StreamHandler()
@@ -50,7 +70,7 @@ json_datas = []
 
 class Player(object):
     def __init__(self, path, silent=False) -> None:
-        self.wave_obj = sa.WaveObject.from_wave_file(path)
+        self.wave_obj = WaveObject.from_wave_file(path)
         self.play_obj = None
         self.silent = silent
 
@@ -59,7 +79,8 @@ class Player(object):
             return
         if self.play_obj is not None:
             self.play_obj.stop()
-        self.play_obj = self.wave_obj.play()
+        if self.wave_obj is not None:
+            self.play_obj = self.wave_obj.play()
 
     def is_playing(self):
         if self.play_obj is None:
@@ -75,6 +96,7 @@ class Log_infomations(object):
     tic: float
     toc: float
     total_requests: int
+    report_requests: int
     iter_requests: int
     iter_reject_requests: int
     course_info: dict
@@ -96,51 +118,33 @@ class Log_infomations(object):
         self.iter_reject_requests = 0
         self.course_info = self.init_info(json_datas)
 
+    def update(self, cls_name, errorCode):
+        global rejectErrorCode
+        self.course_info[cls_name]["total"] += 1
+        self.total_requests += 1
+        self.report_requests += 1
+        self.iter_requests += 1
+        if errorCode == "eywxt.save.stuLimit.error":
+            pass
+        elif (
+            errorCode == "success"
+            or errorCode == "eywxt.save.msLimit.error"
+            or errorCode == "eywxt.save.cantXkByCopy.error"
+        ):
+            del log_infos.course_info[cls_name]
+        else:
+            self.iter_reject_requests += 1
+            self.course_info[cls_name]["reject"] += 1
+
     def __init__(self, json_datas) -> None:
         self.reset(json_datas)
         self.total_requests = 0
+        self.report_requests = 0
 
 
-class Settings(object):
-    enabled_dynamic_requests: bool
-    target_requests_per_second: int
-    requests_per_second: int
-    reject_warning_threshold: float
-    log_interval_seconds: int
-    gap: int
-    silent: bool
-    share: bool
-
-    def __init__(self, config_path, json_datas) -> None:
-        config = ConfigParser()
-        config.read(config_path, encoding="utf-8")
-
-        self.enabled_dynamic_requests = config["DEFAULT"].getboolean(
-            "enabled_dynamic_requests"
-        )
-        self.target_requests_per_second = int(config["DEFAULT"]["requests_per_second"])
-        self.requests_per_second = self.target_requests_per_second
-        self.reject_warning_threshold = float(
-            config["DEFAULT"]["reject_warning_threshold"]
-        )
-        self.log_interval_seconds = int(config["DEFAULT"]["log_interval_seconds"])
-        self.reject_warning_threshold = (
-            self.reject_warning_threshold
-            * self.target_requests_per_second
-            / len(json_datas)
-        )
-        self.gap = int(config["DEFAULT"]["gap"])
-        self.silent = config["DEFAULT"].getboolean("silent")
-        self.share = config["DEFAULT"].getboolean("share")
-
-    def __str__(self) -> str:
-        return f"enabled_dynamic_requests: {self.enabled_dynamic_requests}\ntarget_requests_per_second: {self.target_requests_per_second}\nrequests_per_second: {self.requests_per_second}\nreject_warning_threshold: {self.reject_warning_threshold}\nlog_interval_seconds: {self.log_interval_seconds}"
-
-    def __repr__(self) -> str:
-        return self.__str__()
-
-
-unknownErrorCode = set()
+rejectErrorCode = set(
+    ["服务器繁忙，请稍后再试！", "正在准备数据，请稍后重试...", "选课已结束！"]
+)
 processedClasses = set()
 
 
@@ -167,7 +171,7 @@ async def request_report():
                 connector=aiohttp.TCPConnector(ssl=False)
             ) as session:
                 async with session.get(
-                    f"https://ruccourse.panjd.net/request_report?count={log_infos.total_requests}"
+                    f"https://ruccourse.panjd.net/request_report?count={log_infos.report_requests}"
                 ) as response:
                     pass
     except NameError:
@@ -175,7 +179,7 @@ async def request_report():
 
 
 async def grab(json_data):
-    global cookies, json_datas, log_infos, unknownErrorCode, player
+    global cookies, json_datas, log_infos, rejectErrorCode, player
     url = "https://jw.ruc.edu.cn/resService/jwxtpt/v1/xsd/stuCourseCenterController/saveStuXkByRmdx"
     params = {
         "resourceCode": "XSMH0303",
@@ -203,44 +207,31 @@ async def grab(json_data):
                     processedClasses.add(cls_name)
                 json_datas.remove(json_data)
                 player.play()
-                del log_infos.course_info[json_data["ktmc_name"]]
             elif errorCode == "eywxt.save.msLimit.error":
                 if cls_name not in processedClasses:
                     logger.imp_info(f"{cls_name} 有名额，但同类别已选数目达到上限")
                     processedClasses.add(cls_name)
                 json_datas.remove(json_data)
                 player.play()
-                del log_infos.course_info[json_data["ktmc_name"]]
-            elif (
-                errorCode == "服务器繁忙，请稍后再试！"
-                or errorCode == "正在准备数据，请稍后重试..."
-                or errorCode == "选课已结束！"
-                or errorCode in unknownErrorCode
-            ):
+            elif errorCode in rejectErrorCode:
                 logger.debug(f"{cls_name} 服务器拒绝响应，errorCode：{errorCode}")
-                log_infos.iter_reject_requests += 1
-                log_infos.course_info[cls_name]["reject"] += 1
             elif errorCode == "eywxt.save.cantXkByCopy.error":
                 if cls_name not in processedClasses:
                     logger.imp_info(f"{cls_name} 已选，跳过")
                     processedClasses.add(cls_name)
                 json_datas.remove(json_data)
-                del log_infos.course_info[json_data["ktmc_name"]]
             elif errorCode != "eywxt.save.stuLimit.error":
-                unknownErrorCode.add(errorCode)
-                log_infos.iter_reject_requests += 1
-                log_infos.course_info[cls_name]["reject"] += 1
+                rejectErrorCode.add(errorCode)
                 logger.warning(
-                    f"未知 errCode：{errorCode}，请联系开发人员。将视该 errorCode 为服务器拒绝响应，请自行判断是否会影响抢课。"
+                    f"未知 errCode：{errorCode}，将视该 errorCode 为服务器拒绝响应，请根据请求速度等信息判断是否会影响抢课"
                 )
-            log_infos.course_info[cls_name]["total"] += 1
-            log_infos.total_requests += 1
-            log_infos.iter_requests += 1
+                logger.warning(f"Response: {result}")
+            log_infos.update(cls_name, errorCode)
             return [cls_name, errorCode]
 
 
 async def log(stop_signal):
-    global log_infos, settings
+    global log_infos, settings, json_datas
     log_infos.reset(json_datas)
     await asyncio.sleep(1)
     while not stop_signal.is_set():
@@ -251,7 +242,7 @@ async def log(stop_signal):
         )
         rej_ratio = log_infos.iter_reject_requests / log_infos.iter_requests
 
-        worst_reqs = 100000
+        worst_reqs = float("inf")
         for cls_name in log_infos.course_info.keys():
             if log_infos.course_info[cls_name]["total"] != 0:
                 worst_reqs = min(
@@ -264,7 +255,7 @@ async def log(stop_signal):
                 )
 
         if (
-            worst_reqs < settings.reject_warning_threshold
+            worst_reqs < settings.reject_warning_threshold / len(json_datas)
             and log_infos.toc - log_infos.tic > 5
         ):
             if log_infos.iter_reject_requests == log_infos.iter_requests:
@@ -299,6 +290,10 @@ async def log(stop_signal):
         if flush:
             log_infos.reset(json_datas)
 
+        if log_infos.report_requests > 10000:
+            await request_report()
+            log_infos.report_requests = 0
+
         await asyncio.sleep(settings.log_interval_seconds)
 
 
@@ -306,22 +301,33 @@ async def main():
     global json_datas, cookies, log_infos, settings, player
 
     logger.imp_info("脚本开始运行")
-    logger.imp_info(f"配置文件路径：{config_path}")
-    logger.imp_info(f"日志文件路径：{log_path}")
+    logger.imp_info(
+        f"如果你喜欢这个项目，欢迎给项目点个 star ：https://github.com/panjd123/RUC-CourseSelectionTool"
+    )
+    logger.imp_info(f"配置文件路径：{CONFIG_PATH}")
+    logger.imp_info(f"抢课列表路径：{COURSES_PATH}")
+    logger.imp_info(f"日志文件路径：{LOG_PATH}")
+
+    player = Player(RING_PATH, silent=settings.silent)
 
     try:
-        if not os.path.exists(json_datas_path):
-            raise ValueError
-        json_datas = pickle.load(open(json_datas_path, "rb"))
+        if os.path.exists(COURSES_PATH):
+            logger.imp_info(f"正在读取抢课列表: {COURSES_PATH}")
+            with open(COURSES_PATH, "r") as f:
+                json_datas = json.loads(f.read())
+        elif os.path.exists(OLD_PKL_PATH):
+            logger.imp_info(f"正在读取旧格式抢课列表: {OLD_PKL_PATH}")
+            json_datas = collect.migrate_old_pkl()
+
         if len(json_datas) == 0:
             raise ValueError
-    except Exception as e:
+    except Exception:
         logger.error("抢课列表为空")
         collect_now = input(
             "你需要先手动选择要抢的课，是否现在开始选择（请确保你已经正确配置好 ruclogin） Y/n："
         )
         if collect_now.lower().startswith("y") or collect_now == "":
-            json_datas = collect.main()
+            json_datas = collect.collect_courses()
             if len(json_datas) == 0:
                 logger.error("抢课列表为空")
                 logger.imp_info("脚本已停止")
@@ -330,19 +336,14 @@ async def main():
             logger.imp_info("脚本已停止")
             exit(1)
 
-    settings = Settings(config_path, json_datas)
-
     if settings.silent:
-        logger.imp_info(f"不启用提示铃声（如果有需要，你可以替换铃声文件）")
+        logger.imp_info(f"不启用提示铃声")
     else:
-        logger.imp_info(f"启用提示铃声（如果有需要，你可以替换铃声文件）")
-    logger.imp_info(f"铃声文件路径：{ring_path}")
+        logger.imp_info(f"启用提示铃声")
+        logger.imp_info(f"铃声文件路径：{RING_PATH}")
 
     semester_code = json_datas[0]["jczy013id"]
     logger.imp_info(f"学期：{code2semester(semester_code)}")
-
-    for json_data in json_datas:
-        logger.imp_info(f"待抢课程：{json_data['ktmc_name']}")
 
     if settings.target_requests_per_second > 100:
         logger.error(
@@ -365,8 +366,10 @@ async def main():
             f"gap={settings.gap}，脚本将在每个小时的整{settings.gap}分钟执行"
         )
 
+    for json_data in json_datas:
+        logger.imp_info(f"待抢课程：{json_data['ktmc_name']}")
+
     log_infos = Log_infomations(json_datas)
-    player = Player(ring_path, silent=settings.silent)
 
     cookies = get_cookies(domain="jw")
     stop_signal = asyncio.Event()
@@ -379,7 +382,7 @@ async def main():
             next_sec = 45 - current.second
             wait_time = next_min * 60 + next_sec
 
-            if wait_time > 0 and wait_time < settings.gap * 60 - 30:
+            if 0 < wait_time < settings.gap * 60 - 30:
                 stop_signal.set()
                 logger.info(
                     "等待中，下次启动时间为："
@@ -409,13 +412,13 @@ async def main():
 
 def run(debug=False):
     global cookies
-    for _ in range(10):
+    for _ in range(1000):
         try:
             asyncio.run(main())
-        except KeyboardInterrupt:
+        except KeyboardInterrupt as esc:
             asyncio.run(request_report())
             if debug:
-                raise KeyboardInterrupt
+                raise KeyboardInterrupt from esc
             logger.imp_info("脚本已停止")
             exit(0)
         except Exception as e:
@@ -428,8 +431,10 @@ def run(debug=False):
             asyncio.run(request_report())
             if debug:
                 raise e
-            logger.error(e)
-            logger.error("脚本遇到未知错误，重试。")
+            logger.error(f"脚本遇到未知错误：{e}，重试")
+    logger.error("脚本因未知错误导致的重试次数过多，已停止")
+    asyncio.run(request_report())
+    exit(1)
 
 
 __doc__ = """
@@ -449,18 +454,20 @@ Options:
 
 
 def entry_point():
-    args = docopt(__doc__, version="0.1.5")
+    args = docopt(__doc__)
     if args["-V"]:
-        print(f"配置文件路径：{config_path}")
-        print(f"日志文件路径：{log_path}")
-        print(f"铃声文件路径：{ring_path}")
+        print(f"配置文件路径：{CONFIG_PATH}")
+        print(f"抢课列表路径：{COURSES_PATH}")
+        print(f"日志文件路径：{LOG_PATH}")
+        print(f"铃声文件路径：{RING_PATH}")
     else:
         if args["--verbose"]:
             console_hd.setLevel(logging.INFO)
         if args["--debug"]:
+            file_hd.setLevel(logging.DEBUG)
             console_hd.setLevel(logging.DEBUG)
         if args["--recollect"]:
-            collect.main()
+            collect.collect_courses()
         run(debug=args["--debug"])
 
 

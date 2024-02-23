@@ -77,6 +77,7 @@ jw.ruc.edu.cn get cookies time: 1.925s, check cookies time: 0.395s
 - 见 `ruccourse --help`
 - 默认情况下（即不加 `--verbose` 参数时）抢到课或同类别选满会输出到控制台，速度监控会输出到文件，这样你可以一眼看出有没有抢到课
 - 配置文件中包含更多可设置量
+- 特别地，如果你需要抢课铃声提示功能，请手动 `pip install simpleaudio`，然后在配置文件中修改 `silent` 项
 
 ## Remind
 
@@ -106,7 +107,7 @@ A：经过 2021-2023 年三年的尝试，1000/s 的请求速度都没有出现�
 
 Q：为什么是半自动化？
 
-A：人大的教务系统写得“非常好”，抢课请求里面引入了一大堆意义不明，命名不明的不知道怎么填，不填还会炸的参数，研究清楚太费劲，遂采用抓包的方法。
+A：抢课请求里面有一大堆意义不明，命名不明的不知道怎么填，不填还会炸的参数，研究清楚太费劲，遂采用抓包的方法。
 
 Q：控制台输出 “WARNING - 44.55% 的请求被拒绝，真实请求速度为 29.251 req/s，最低请求速度为 4.897 req/s”
 
@@ -118,15 +119,11 @@ A：不支持，必须先抓包，一个可能的方法是提前抓包，下阶�
 
 Q：服务器上怎么运行？
 
-A：将本地的 json_datas.pkl 上传到服务器对应目录下，其他类似。
-
-Q：怎么当作脚本运行？
-
-A：`python /path/to/RUC-CourseSelectionTool/ruccourse/main.py`
+A：将本地的**抢课列表文件**（运行时有输出其路径）上传到服务器对应目录下，其他类似。
 
 Q: 遇到了其他报错。
 
-A: 你可以尝试 `ruccourse --debug` 以抛出错误，在这之前，你或许需要先尝试 `ruclogin --debug` 排除获取 cookies 阶段的问题。如果你无法解决这个问题，可以提交 Issue。
+A: 你可以尝试 `ruccourse --debug` 以抛出错误，在这之前，你或许需要先尝试 `ruclogin --debug` 排除获取 cookies 阶段的问题。如果你无法解决这个问题，可以提交 Issue。尽量不要直接联系原作者，因为原作者已经不再更新脚本，发布在 Issue 中更有可能得到其他开发者的帮助。发起 Issue 时注意隐私，不要泄露自己的 Cookies。
 
 ## 效果
 
@@ -145,6 +142,12 @@ A: 你可以尝试 `ruccourse --debug` 以抛出错误，在这之前，你或�
 [![Star History Chart](https://api.star-history.com/svg?repos=panjd123/RUC-CourseSelectionTool&type=Date)](https://star-history.com/#panjd123/RUC-CourseSelectionTool&Date)
 
 ## Update
+
+### 0.1.8
+
+- 删除了对 simpleaudio 的默认安装要求，因为安装这个包很容易报错
+- 更新到用 json 格式存储抓包
+- 实时上传抢课次数
 
 ### 0.1.7
 
