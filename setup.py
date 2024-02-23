@@ -20,6 +20,7 @@ setup(
         "ruccourse": [
             "config.ini",
             "json_datas.pkl",
+            "courses.json",
             "ruccourse.log",
             "ring.wav",
         ]

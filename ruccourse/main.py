@@ -3,12 +3,31 @@ import json
 import logging
 import os
 import os.path as osp
-import sys
-from configparser import ConfigParser
 from datetime import datetime, timedelta
 from timeit import default_timer as timer
 
 import aiohttp
+
+from docopt import docopt
+from ruclogin import *
+
+if __name__ == "__main__":  # 并不是一种优雅的写法，待改进
+    import collect
+    from settings import Settings
+else:
+    from . import collect
+    from .settings import Settings
+
+ROOT = osp.dirname(osp.abspath(__file__))
+
+
+LOG_PATH = osp.join(ROOT, "ruccourse.log")
+CONFIG_PATH = osp.join(ROOT, "config.ini")
+OLD_PKL_PATH = osp.join(ROOT, "json_datas.pkl")
+COURSES_PATH = osp.join(ROOT, "courses.json")
+RING_PATH = osp.join(ROOT, "ring.wav")
+
+settings = Settings(CONFIG_PATH)
 
 try:
     from simpleaudio import WaveObject
@@ -19,29 +38,11 @@ except ImportError:
         @classmethod
         def from_wave_file(cls, *args, **kwargs):
             global logger
-            logger.warning(
-                "simpleaudio 未安装，无法播放提示音，你可以通过 pip install simpleaudio 避免这个警告"
-            )
+            if not settings.silent:
+                logger.error(
+                    "simpleaudio 未安装，无法播放提示音，请 pip install simpleaudio"
+                )
             return None
-
-
-from docopt import docopt
-from ruclogin import *
-
-if __name__ == "__main__":  # 并不是一种优雅的写法，待改进
-    import collect
-else:
-    from . import collect
-
-ROOT = osp.dirname(osp.abspath(__file__))
-
-
-LOG_PATH = osp.join(ROOT, "ruccourse.log")
-CONFIG_PATH = osp.join(ROOT, "config.ini")
-OLD_PKL_PATH = osp.join(ROOT, "json_datas.pkl")
-COURSES_PATH = osp.join(ROOT, "courses.json")
-collect_py_path = osp.join(ROOT, "collect.py")
-RING_PATH = osp.join(ROOT, "ring.wav")
 
 
 IMPORTANT_INFO = 25
@@ -141,45 +142,6 @@ class Log_infomations(object):
         self.report_requests = 0
 
 
-class Settings(object):
-    enabled_dynamic_requests: bool
-    target_requests_per_second: int
-    requests_per_second: int
-    reject_warning_threshold: float
-    log_interval_seconds: int
-    gap: int
-    silent: bool
-    share: bool
-
-    def __init__(self, config_path, json_datas) -> None:
-        config = ConfigParser()
-        config.read(config_path, encoding="utf-8")
-
-        self.enabled_dynamic_requests = config["DEFAULT"].getboolean(
-            "enabled_dynamic_requests"
-        )
-        self.target_requests_per_second = int(config["DEFAULT"]["requests_per_second"])
-        self.requests_per_second = self.target_requests_per_second
-        self.reject_warning_threshold = float(
-            config["DEFAULT"]["reject_warning_threshold"]
-        )
-        self.log_interval_seconds = int(config["DEFAULT"]["log_interval_seconds"])
-        self.reject_warning_threshold = (
-            self.reject_warning_threshold
-            * self.target_requests_per_second
-            / len(json_datas)
-        )
-        self.gap = int(config["DEFAULT"]["gap"])
-        self.silent = config["DEFAULT"].getboolean("silent")
-        self.share = config["DEFAULT"].getboolean("share")
-
-    def __str__(self) -> str:
-        return f"enabled_dynamic_requests: {self.enabled_dynamic_requests}\ntarget_requests_per_second: {self.target_requests_per_second}\nrequests_per_second: {self.requests_per_second}\nreject_warning_threshold: {self.reject_warning_threshold}\nlog_interval_seconds: {self.log_interval_seconds}"
-
-    def __repr__(self) -> str:
-        return self.__str__()
-
-
 rejectErrorCode = set(
     ["服务器繁忙，请稍后再试！", "正在准备数据，请稍后重试...", "选课已结束！"]
 )
@@ -261,15 +223,15 @@ async def grab(json_data):
             elif errorCode != "eywxt.save.stuLimit.error":
                 rejectErrorCode.add(errorCode)
                 logger.warning(
-                    f"未知 errCode：{errorCode}，将视该 errorCode 为服务器拒绝响应，请根据请求速度判断是否会影响抢课。"
+                    f"未知 errCode：{errorCode}，将视该 errorCode 为服务器拒绝响应，请根据请求速度等信息判断是否会影响抢课"
                 )
-                logger.debug(f"unknown response: {result}")
+                logger.warning(f"Response: {result}")
             log_infos.update(cls_name, errorCode)
             return [cls_name, errorCode]
 
 
 async def log(stop_signal):
-    global log_infos, settings
+    global log_infos, settings, json_datas
     log_infos.reset(json_datas)
     await asyncio.sleep(1)
     while not stop_signal.is_set():
@@ -293,7 +255,7 @@ async def log(stop_signal):
                 )
 
         if (
-            worst_reqs < settings.reject_warning_threshold
+            worst_reqs < settings.reject_warning_threshold / len(json_datas)
             and log_infos.toc - log_infos.tic > 5
         ):
             if log_infos.iter_reject_requests == log_infos.iter_requests:
@@ -339,17 +301,22 @@ async def main():
     global json_datas, cookies, log_infos, settings, player
 
     logger.imp_info("脚本开始运行")
+    logger.imp_info(
+        f"如果你喜欢这个项目，欢迎给项目点个 star ：https://github.com/panjd123/RUC-CourseSelectionTool"
+    )
     logger.imp_info(f"配置文件路径：{CONFIG_PATH}")
     logger.imp_info(f"抢课列表路径：{COURSES_PATH}")
     logger.imp_info(f"日志文件路径：{LOG_PATH}")
 
-    try:
-        logger.imp_info(f"正在尝试读取旧的配置文件: {OLD_PKL_PATH}")
+    player = Player(RING_PATH, silent=settings.silent)
 
+    try:
         if os.path.exists(COURSES_PATH):
+            logger.imp_info(f"正在读取抢课列表: {COURSES_PATH}")
             with open(COURSES_PATH, "r") as f:
                 json_datas = json.loads(f.read())
         elif os.path.exists(OLD_PKL_PATH):
+            logger.imp_info(f"正在读取旧格式抢课列表: {OLD_PKL_PATH}")
             json_datas = collect.migrate_old_pkl()
 
         if len(json_datas) == 0:
@@ -369,20 +336,14 @@ async def main():
             logger.imp_info("脚本已停止")
             exit(1)
 
-    settings = Settings(CONFIG_PATH, json_datas)
-    player = Player(RING_PATH, silent=settings.silent)
-
     if settings.silent:
-        logger.imp_info(f"不启用提示铃声（如果有需要，你可以替换铃声文件）")
+        logger.imp_info(f"不启用提示铃声")
     else:
-        logger.imp_info(f"启用提示铃声（如果有需要，你可以替换铃声文件）")
-    logger.imp_info(f"铃声文件路径：{RING_PATH}")
+        logger.imp_info(f"启用提示铃声")
+        logger.imp_info(f"铃声文件路径：{RING_PATH}")
 
     semester_code = json_datas[0]["jczy013id"]
     logger.imp_info(f"学期：{code2semester(semester_code)}")
-
-    for json_data in json_datas:
-        logger.imp_info(f"待抢课程：{json_data['ktmc_name']}")
 
     if settings.target_requests_per_second > 100:
         logger.error(
@@ -404,6 +365,9 @@ async def main():
         logger.imp_info(
             f"gap={settings.gap}，脚本将在每个小时的整{settings.gap}分钟执行"
         )
+
+    for json_data in json_datas:
+        logger.imp_info(f"待抢课程：{json_data['ktmc_name']}")
 
     log_infos = Log_infomations(json_datas)
 
@@ -448,7 +412,7 @@ async def main():
 
 def run(debug=False):
     global cookies
-    for _ in range(10):
+    for _ in range(1000):
         try:
             asyncio.run(main())
         except KeyboardInterrupt as esc:
@@ -456,7 +420,7 @@ def run(debug=False):
             if debug:
                 raise KeyboardInterrupt from esc
             logger.imp_info("脚本已停止")
-            sys.exit(0)
+            exit(0)
         except Exception as e:
             try:
                 if not check_cookies(cookies, domain="jw"):
@@ -467,8 +431,10 @@ def run(debug=False):
             asyncio.run(request_report())
             if debug:
                 raise e
-            logger.error(e)
-            logger.error("脚本遇到未知错误，重试。")
+            logger.error(f"脚本遇到未知错误：{e}，重试")
+    logger.error("脚本因未知错误导致的重试次数过多，已停止")
+    asyncio.run(request_report())
+    exit(1)
 
 
 __doc__ = """
