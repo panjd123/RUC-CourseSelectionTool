@@ -94,7 +94,7 @@ jw.ruc.edu.cn get cookies time: 1.925s, check cookies time: 0.395s
 
 Q：如何更新抢课列表，或者说想抢别的课？
 
-A：`ruccouse --recollect`
+A：`ruccourse --recollect`
 
 Q: 怎么检验抢课脚本的效果？
 
