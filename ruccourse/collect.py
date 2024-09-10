@@ -69,7 +69,7 @@ def collect_courses():
                     data = request.body.decode("utf-8")
                     d = loads(data)
                     json_datas.append(d)
-            with open(COURSES_PATH, "w") as f:
+            with open(COURSES_PATH, "w", encoding="utf-8") as f:
                 f.write(dumps(json_datas, ensure_ascii=False, indent=4))
             print(
                 "你选择的课程是：", " ".join([data["ktmc_name"] for data in json_datas])

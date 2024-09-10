@@ -313,7 +313,7 @@ async def main():
     try:
         if os.path.exists(COURSES_PATH):
             logger.imp_info(f"正在读取抢课列表: {COURSES_PATH}")
-            with open(COURSES_PATH, "r") as f:
+            with open(COURSES_PATH, "r", encoding="utf-8") as f:
                 json_datas = json.loads(f.read())
         elif os.path.exists(OLD_PKL_PATH):
             logger.imp_info(f"正在读取旧格式抢课列表: {OLD_PKL_PATH}")
