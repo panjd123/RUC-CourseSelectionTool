@@ -412,15 +412,14 @@ async def main():
 
 def run(debug=False):
     global cookies
-    for _ in range(1000):
+    for _ in range(10):
         try:
             asyncio.run(main())
         except KeyboardInterrupt as esc:
             asyncio.run(request_report())
-            if debug:
-                raise KeyboardInterrupt from esc
-            logger.imp_info("脚本已停止")
-            exit(0)
+            raise KeyboardInterrupt from esc
+            # logger.imp_info("脚本已停止")
+            # exit(0)
         except Exception as e:
             try:
                 if not check_cookies(cookies, domain="jw"):
@@ -432,7 +431,7 @@ def run(debug=False):
             if debug:
                 raise e
             logger.error(f"脚本遇到未知错误：{e}，重试")
-    logger.error("脚本因未知错误导致的重试次数过多，已停止")
+    logger.error(f"脚本因未知错误导致 {e} 的重试次数过多，已停止")
     asyncio.run(request_report())
     exit(1)
 
@@ -446,7 +445,6 @@ Usage:
 
 Options:
     -h --help           Show this screen.
-    --debug             Ctrl+C will raise KeyboardInterrupt, make it convenient to find where the error is.
     --verbose           Show more information.
     --recollect         Recollect courses.
     -V                  Show information.
@@ -468,7 +466,7 @@ def entry_point():
             console_hd.setLevel(logging.DEBUG)
         if args["--recollect"]:
             collect.collect_courses()
-        run(debug=args["--debug"])
+        run()
 
 
 if __name__ == "__main__":

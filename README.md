@@ -100,6 +100,10 @@ Q: 怎么检验抢课脚本的效果？
 
 A: 你可以 `ruccourse --recollect` 重新选一次课，并选择还有名额的课，同时在关闭浏览器前手动退选这门课。此时关闭浏览器，脚本开始运行，你应该会看到其显示抢课成功，同时教务处网站也会显示你抢到了这门课。
 
+Q：运行一段时间后卡住，表现为不再输出日志？
+
+A：见 [#8](https://github.com/panjd123/RUC-CourseSelectionTool/issues/8)，期待有缘人修复 BUG，目前的解决方案是：已知微人大总是整 5 分钟放出课程，所以你可以定时重启本脚本，[#8](https://github.com/panjd123/RUC-CourseSelectionTool/issues/8) 就是一种方案。
+
 Q：运行原理？
 
 A：暴力发选课请求，直到抢到，或者同类课达到选课上线。其实抢课的实现不复杂，但是之前的测试表明，cookies 容易失效，所以现在配合 [ruclogin](https://github.com/panjd123/ruclogin) 可以保证抢课不中断。
@@ -145,6 +149,10 @@ A: 你可以尝试 `ruccourse --debug` 以抛出错误，在这之前，你或�
 [![Star History Chart](https://api.star-history.com/svg?repos=panjd123/RUC-CourseSelectionTool&type=Date)](https://star-history.com/#panjd123/RUC-CourseSelectionTool&Date)
 
 ## Update
+
+### 0.1.10
+
+- 删除 --debug 选项，去掉默认情况下大部分错误捕获以方便调试（相当于默认开启 --debug）
 
 ### 0.1.9
 
