@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools", "wheel", "setuptools-git-versioning>=2.0,<3"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools-git-versioning]
+enabled = true
+
+[project]
+name = "ruccourse"
+dynamic = ["version"]
+description = "A tool for RUC students to select courses."
+readme = "README.md"
+authors = [
+    { name = "panjd123", email = "xm.jarden@gmail.com" }
+]
+license = {file = "LICENSE"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "ruclogin",
+    "aiohttp",
+    "docopt"
+]
+
+[project.optional-dependencies]
+audio = ["simpleaudio"]
+all = ["simpleaudio"]
+
+[project.urls]
+Homepage = "https://github.com/panjd123/RUC-CourseSelectionTool"
+Repository = "https://github.com/panjd123/RUC-CourseSelectionTool.git"
+
+[tool.setuptools.package-data]
+ruccourse = ["config.ini", "json_datas.pkl", "courses.json", "ruccourse.log", "ring.wav"]
+
+[project.scripts]
+ruccourse = "ruccourse.main:entry_point"

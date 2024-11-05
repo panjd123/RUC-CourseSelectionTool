@@ -17,8 +17,9 @@ https://pypi.org/project/ruccourse/) [![GitHub Repo stars](https://img.shields.i
 
 ## Simple Usage
 
-```
+```bash
 pip install ruccourse
+# pip install ruccourse[all]  # 包含 simpleaudio，用于抢课铃声提示
 ruclogin                # only need to run once
 ruccourse --verbose
 ```
@@ -81,14 +82,16 @@ jw.ruc.edu.cn get cookies time: 1.925s, check cookies time: 0.395s
 
 ## Remind
 
-拥有 cookies 相当于拥有微人大的完全访问权限，请不要和任何人分享。
+- 拥有 cookies 相当于拥有微人大的完全访问权限，请不要和任何人分享。
 
-执行 `ruclogin --reset` 可以将所有信息初始化（包括配置文件内保存的用户名密码，以及缓存的 cookies）。
+   执行 `ruclogin --reset` 可以将所有信息初始化（包括配置文件内保存的用户名密码，以及缓存的 cookies）。
 
-脚本默认会上传请求次数等信息到服务器，这些信息不包含个人隐私，将用于改进抢课体验和便于脚本作者了解这个脚本的被使用情况，~~在被大规模使用前跑路~~。你可以在配置文件中关闭，但我认为：
+- 脚本默认会上传请求次数等信息到服务器，这些信息不包含个人隐私，将用于改进抢课体验和便于脚本作者了解这个脚本的被使用情况，~~在被大规模使用前跑路~~。你可以在配置文件中关闭，但我认为：
 
-- 如果你有能力阅读源码，并判断出这个功能不会泄露你的个人隐私，那么你不需要关闭这个功能。
-- 如果你没有能力阅读源代码，那么你从一开始就不应该使用这个脚本，因为这个脚本高度涉及隐私。
+    - 如果你有能力阅读源码，并判断出这个功能不会泄露你的个人隐私，那么你不需要关闭这个功能。
+    - 如果你没有能力阅读源代码，那么你从一开始就不应该使用这个脚本，因为这个脚本高度涉及隐私。
+
+- 当你通过 `pip install -U ruccourse` 更新脚本时，你的配置文件会被覆盖，请提前备份。值得备份的文件有 `config.ini` 和 `courses.json`，你可以通过 `ruccourse -V` 来检查他们的路径。
 
 ## Q&A
 
@@ -149,6 +152,10 @@ A: 你可以尝试 `ruccourse --debug` 以抛出错误，在这之前，你或�
 [![Star History Chart](https://api.star-history.com/svg?repos=panjd123/RUC-CourseSelectionTool&type=Date)](https://star-history.com/#panjd123/RUC-CourseSelectionTool&Date)
 
 ## Update
+
+### 0.1.11
+
+- 更新到更现代的 pyproject.toml
 
 ### 0.1.10
 
