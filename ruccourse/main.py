@@ -33,6 +33,8 @@ DYNAMIC_REQUESTS_THRESHOLD = 20
 WARMUP_SECONDS = 20
 STATS_INTERVAL = 600
 
+STATS_URL = "https://ruccourse.panjd.net"
+
 UUID = str(uuid.uuid1())
 
 settings = Settings(CONFIG_PATH)
@@ -166,12 +168,9 @@ async def success_report():
             async with aiohttp.ClientSession(
                 connector=aiohttp.TCPConnector(ssl=False)
             ) as session:
-                async with session.get(
-                    f"https://ruccourse.panjd.net/success_report?count=1&uuid={UUID}"
-                ) as response:
-                    logger.info(
-                        f"suceess_report?count=1&uuid={UUID}: {await response.text()}"
-                    )
+                uri = f"/suceess_report?count=1&uuid={UUID}"
+                async with session.get(STATS_URL + uri) as response:
+                    logger.info(f"{uri}: {await response.text()}")
     except NameError:
         pass
 
@@ -183,12 +182,9 @@ async def request_report():
             async with aiohttp.ClientSession(
                 connector=aiohttp.TCPConnector(ssl=False)
             ) as session:
-                async with session.get(
-                    f"https://ruccourse.panjd.net/request_report?count={log_infos.report_requests}&uuid={UUID}"
-                ) as response:
-                    logger.info(
-                        f"request_report?count={log_infos.report_requests}&uuid={UUID}: {await response.text()}"
-                    )
+                uri = f"/request_report?count={log_infos.report_requests}&uuid={UUID}"
+                async with session.get(STATS_URL + uri) as response:
+                    logger.info(f"{uri}: {await response.text()}")
     except NameError:
         pass
 
