@@ -32,6 +32,7 @@ REQUESTS_HARD_THRESHOLD = REQUESTS_THRESHOLD * 1.5
 DYNAMIC_REQUESTS_THRESHOLD = 20
 WARMUP_SECONDS = 20
 STATS_INTERVAL = 600
+COOKIES_CHECK_INTERVAL = 10
 
 STATS_URL = "https://ruccourse.panjd.net"
 
@@ -429,27 +430,32 @@ async def main(warmup=False):
 
     start = timer()
 
+    def get_wait_sec():
+        current = datetime.now()
+        next_min = settings.gap - 1 - current.minute % settings.gap
+        next_sec = 45 - current.second
+        return next_min * 60 + next_sec
+
+    def should_wait(wait_sec):
+        return 0 < wait_sec < settings.gap * 60 - 30
+
     while True:
         if settings.gap > 0 and not (warmup and timer() - start < WARMUP_SECONDS):
-            current = datetime.now()
-            next_min = settings.gap - 1 - current.minute % settings.gap
-            next_sec = 45 - current.second
-            wait_time = next_min * 60 + next_sec
+            wait_sec = get_wait_sec()
 
-            if 0 < wait_time < settings.gap * 60 - 30:
+            if should_wait(wait_sec):
                 stop_signal.set()
                 logger.info(
-                    "等待中，下次启动时间为："
-                    + str(current + timedelta(seconds=wait_time))
+                    f"等待中，下次启动时间为：{current + timedelta(seconds=wait_sec)}，等待时间 {wait_sec} 秒"
                 )
-                while wait_time > 5:
+                while wait_sec > COOKIES_CHECK_INTERVAL + 5:
                     if not check_cookies(cookies, domain="jw"):
                         logger.warning("cookie失效")
                         cookies = get_cookies(domain="jw", cache=False)
-                    await asyncio.sleep(5)
-                    wait_time -= 5
-                await asyncio.sleep(wait_time)
-                wait_time = 0
+                    asyncio.sleep(COOKIES_CHECK_INTERVAL)
+                    wait_sec = get_wait_sec()
+                if should_wait(wait_sec):
+                    await asyncio.sleep(wait_sec)
                 stop_signal.clear()
                 asyncio.create_task(log(stop_signal))
 

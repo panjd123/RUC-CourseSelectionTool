@@ -167,6 +167,10 @@ A: 你或许需要先尝试 `ruclogin --debug` 排除获取 cookies 阶段的问
 
 ## Update
 
+### 0.2.4
+
+- 修复 gap 的误差
+
 ### 0.2.3
 
 - 保证 stats 和日志的内容一致
