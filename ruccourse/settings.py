@@ -9,7 +9,7 @@ class Settings(object):
     log_interval_seconds: int
     gap: int
     silent: bool
-    share: bool
+    stats: bool
 
     def __init__(self, config_path) -> None:
         config = ConfigParser()
@@ -29,4 +29,4 @@ class Settings(object):
         )
         self.gap = int(config["DEFAULT"]["gap"])
         self.silent = config["DEFAULT"].getboolean("silent")
-        self.share = config["DEFAULT"].getboolean("share")
+        self.stats = config["DEFAULT"].getboolean("stats")

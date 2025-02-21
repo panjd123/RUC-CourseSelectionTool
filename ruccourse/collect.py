@@ -13,8 +13,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 ROOT = osp.dirname(osp.abspath(__file__))
 
-OLD_PKL_PATH = osp.join(ROOT, "json_datas.pkl")
 COURSES_PATH = osp.join(ROOT, "courses.json")
+HEADERS_PATH = osp.join(ROOT, "headers.json")
 
 
 def collect_courses():
@@ -58,44 +58,28 @@ def collect_courses():
     print(
         "在浏览器里，选一遍所有你想选的课程（请确保返回成功或选课人数已经到达上限，而不是时间冲突！！！）"
     )
-    print("等待浏览器被关闭...")
+    print("等待浏览器被关闭（如果自动检测失败，请用 Ctrl+C 手动结束）...")
     while True:
         try:
             driver.current_url
-        except WebDriverException:
+        except (WebDriverException, KeyboardInterrupt):
             json_datas = []
+            headers = {}
             for request in driver.requests:
                 if request.path.endswith("saveStuXkByRmdx"):
+                    headers = dict(request.headers)
                     data = request.body.decode("utf-8")
                     d = loads(data)
                     json_datas.append(d)
             with open(COURSES_PATH, "w", encoding="utf-8") as f:
                 f.write(dumps(json_datas, ensure_ascii=False, indent=4))
+            with open(HEADERS_PATH, "w", encoding="utf-8") as f:
+                f.write(dumps(headers, ensure_ascii=False, indent=4))
             print(
                 "你选择的课程是：", " ".join([data["ktmc_name"] for data in json_datas])
             )
             return json_datas
         driver.implicitly_wait(0.1)
-
-
-def migrate_old_pkl():
-    try:
-        import pickle
-
-        with open(OLD_PKL_PATH, "rb") as f:
-            data = pickle.load(f)
-        with open(COURSES_PATH, "w", encoding="utf-8") as f:
-            f.write(dumps(data, ensure_ascii=False, indent=4))
-    except FileNotFoundError:
-        return None
-
-    # remove old pkl file
-    try:
-        os.remove(OLD_PKL_PATH)
-    except FileNotFoundError:
-        pass
-
-    return data
 
 
 if __name__ == "__main__":
