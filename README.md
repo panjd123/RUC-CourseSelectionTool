@@ -167,6 +167,11 @@ A: 你或许需要先尝试 `ruclogin --debug` 排除获取 cookies 阶段的问
 
 ## Update
 
+### 0.2.2
+
+- 修复选择 no 时不能直接退出的问题
+- 修复 stats success 上传的问题
+
 ### 0.2.1
 
 - 修复 stats 的上传频率

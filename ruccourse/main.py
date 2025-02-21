@@ -219,10 +219,10 @@ async def grab(json_data):
             errorCode = result["errorCode"]
             cls_name = json_data["ktmc_name"]
             if errorCode == "success":
-                asyncio.create_task(success_report())
                 if cls_name not in processedClasses:
                     logger.imp_info(f"选到 {cls_name}")
                     processedClasses.add(cls_name)
+                    await success_report()
                 json_datas.remove(json_data)
                 player.play()
             elif errorCode == "eywxt.save.msLimit.error":
