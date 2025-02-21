@@ -336,6 +336,7 @@ async def main(warmup=False):
     )
     if input("我已经阅读并理解上述内容，继续？ Y/n：").lower().startswith("n"):
         logger.imp_info("脚本已停止")
+        exit(0)
     logger.imp_info("脚本开始运行")
     logger.imp_info(
         f"如果你喜欢这个项目，欢迎给项目点个 star ：https://github.com/panjd123/RUC-CourseSelectionTool"
