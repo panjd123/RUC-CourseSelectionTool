@@ -327,13 +327,6 @@ async def log(stop_signal):
 
 async def main(warmup=False):
     global json_datas, cookies, log_infos, settings, player, headers
-
-    logger.imp_info(
-        "已知有同学因为使用本脚本被封号，如果你不理解这个脚本的原理，不能自行判断风险，你不应该使用这个脚本"
-    )
-    if input("我已经阅读并理解上述内容，继续？ Y/n：").lower().startswith("n"):
-        logger.imp_info("脚本已停止")
-        exit(0)
     logger.imp_info("脚本开始运行")
     logger.imp_info(
         f"如果你喜欢这个项目，欢迎给项目点个 star ：https://github.com/panjd123/RUC-CourseSelectionTool"
@@ -445,6 +438,7 @@ async def main(warmup=False):
 
             if should_wait(wait_sec):
                 stop_signal.set()
+                current = datetime.now()
                 logger.info(
                     f"等待中，下次启动时间为：{current + timedelta(seconds=wait_sec)}，等待时间 {wait_sec} 秒"
                 )
@@ -525,6 +519,12 @@ def entry_point():
         if args.debug:
             file_hd.setLevel(logging.DEBUG)
             console_hd.setLevel(logging.DEBUG)
+        logger.imp_info(
+            "已知有同学因为使用本脚本被封号，如果你不理解这个脚本的原理，不能自行判断风险，你不应该使用这个脚本"
+        )
+        if input("我已经阅读并理解上述内容，继续？ Y/n：").lower().startswith("n"):
+            logger.imp_info("脚本已停止")
+            exit(0)
         if args.recollect:
             collect.collect_courses()
         run(debug=args.debug, warmup=args.warmup)
