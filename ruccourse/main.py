@@ -104,6 +104,8 @@ class Log_infomations(object):
     tic: float
     toc: float
     total_requests: int
+    report_tic: float
+    report_toc: float
     report_requests: int
     iter_requests: int
     iter_reject_requests: int
@@ -148,6 +150,7 @@ class Log_infomations(object):
         self.reset(json_datas)
         self.total_requests = 0
         self.report_requests = 0
+        self.report_tic = self.report_toc = timer()
 
 
 rejectErrorCode = set(
@@ -250,7 +253,7 @@ async def log(stop_signal):
     log_infos.reset(json_datas)
     await asyncio.sleep(1)
     while not stop_signal.is_set():
-        log_infos.toc = timer()
+        log_infos.report_toc = log_infos.toc = timer()
         reqs = log_infos.iter_requests / (log_infos.toc - log_infos.tic)
         tru_reqs = (log_infos.iter_requests - log_infos.iter_reject_requests) / (
             log_infos.toc - log_infos.tic
@@ -314,11 +317,13 @@ async def log(stop_signal):
         if flush:
             log_infos.reset(json_datas)
 
-        if log_infos.report_requests > min(
-            settings.target_requests_per_second * STATS_INTERVAL, 10000
+        if (
+            log_infos.report_requests > 10000
+            or log_infos.report_toc - log_infos.report_tic > STATS_INTERVAL
         ):
             await request_report()
             log_infos.report_requests = 0
+            log_infos.report_tic = log_infos.report_toc = timer()
 
         await asyncio.sleep(settings.log_interval_seconds)
 
