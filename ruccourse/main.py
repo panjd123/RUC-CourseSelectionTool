@@ -169,7 +169,7 @@ async def success_report():
             async with aiohttp.ClientSession(
                 connector=aiohttp.TCPConnector(ssl=False)
             ) as session:
-                uri = f"/suceess_report?count=1&uuid={UUID}"
+                uri = f"/success_report?count=1&uuid={UUID}"
                 async with session.get(STATS_URL + uri) as response:
                     logger.info(f"{uri}: {await response.text()}")
     except NameError:
