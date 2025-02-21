@@ -345,17 +345,25 @@ async def main(warmup=False):
         logger.imp_info(f"正在读取选课列表: {COURSES_PATH}")
         with open(COURSES_PATH, "r", encoding="utf-8") as f:
             json_datas = json.loads(f.read())
-        with open(HEADERS_PATH, "r", encoding="utf-8") as f:
-            headers = json.loads(f.read())
-            # fmt: off
-            keys = [
-                "Accept", "Accept-Language", "Cache-Control", "Connection", "Content-Type", "Origin",
-                "Pragma", "Referer", "Sec-Fetch-Dest", "Sec-Fetch-Mode", "Sec-Fetch-Site",
-                "Simulated-By", "TOKEN", "User-Agent", "X-Requested-With", "app",
-                "locale", "sec-ch-ua", "sec-ch-ua-mobile", "sec-ch-ua-platform", "userAgent", "userRoleCode",
-            ]
-            # fmt: on
-            headers = {k: headers[k] for k in keys if k in headers}
+        if osp.exists(HEADERS_PATH):
+            with open(HEADERS_PATH, "r", encoding="utf-8") as f:
+                headers = json.loads(f.read())
+                # fmt: off
+                keys = [
+                    "Accept", "Accept-Language", "Cache-Control", "Connection", "Content-Type", "Origin",
+                    "Pragma", "Referer", "Sec-Fetch-Dest", "Sec-Fetch-Mode", "Sec-Fetch-Site",
+                    "Simulated-By", "TOKEN", "User-Agent", "X-Requested-With", "app",
+                    "locale", "sec-ch-ua", "sec-ch-ua-mobile", "sec-ch-ua-platform", "userAgent", "userRoleCode",
+                ]
+                # fmt: on
+                headers = {k: headers[k] for k in keys if k in headers}
+        else:
+            logger.warning(
+                f"未找到 headers.json，使用默认 headers，这可能会增加被检测的风险"
+            )
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36"
+            }
         if len(json_datas) == 0:
             raise ValueError
     except Exception:
@@ -497,6 +505,7 @@ def entry_point():
     if args.V:
         print(f"配置文件路径：{CONFIG_PATH}")
         print(f"选课列表路径：{COURSES_PATH}")
+        print(f"Headers文件路径：{HEADERS_PATH}")
         print(f"日志文件路径：{LOG_PATH}")
         print(f"铃声文件路径：{RING_PATH}")
     else:

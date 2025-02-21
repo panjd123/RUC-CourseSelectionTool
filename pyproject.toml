@@ -27,6 +27,9 @@ all = ["simpleaudio"]
 Homepage = "https://github.com/panjd123/RUC-CourseSelectionTool"
 Repository = "https://github.com/panjd123/RUC-CourseSelectionTool.git"
 
+[tool.setuptools.packages]
+find = { include = ["ruccourse"] }
+
 [tool.setuptools.package-data]
 ruccourse = [
     "config.ini",
