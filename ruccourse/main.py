@@ -452,8 +452,11 @@ async def main(warmup=False):
                     if not check_cookies(cookies, domain="jw"):
                         logger.warning("cookie失效")
                         cookies = get_cookies(domain="jw", cache=False)
-                    asyncio.sleep(COOKIES_CHECK_INTERVAL)
                     wait_sec = get_wait_sec()
+                    if should_wait(wait_sec) and wait_sec > COOKIES_CHECK_INTERVAL + 5:
+                        await asyncio.sleep(COOKIES_CHECK_INTERVAL)
+                    else:
+                        break
                 if should_wait(wait_sec):
                     await asyncio.sleep(wait_sec)
                 stop_signal.clear()
