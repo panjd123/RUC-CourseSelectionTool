@@ -6,6 +6,7 @@ import os.path as osp
 from datetime import datetime, timedelta
 from timeit import default_timer as timer
 import uuid
+import requests
 
 import aiohttp
 
@@ -519,6 +520,16 @@ def entry_point():
         if args.debug:
             file_hd.setLevel(logging.DEBUG)
             console_hd.setLevel(logging.DEBUG)
+        try:
+            response = requests.get(f"{STATS_URL}/script_control")
+            message, block = response.json()["message"], response.json()["block"]
+            logger.imp_info(f"{message}")
+            if block:
+                logger.error(f"由于作者的设置，该脚本现在被禁止运行")
+                logger.imp_info("脚本已停止")
+                exit(1)
+        except Exception as e:
+            logger.debug(f"无法连接到统计服务器，无法获取脚本状态：{e}")
         logger.imp_info(
             "已知有同学因为使用本脚本被封号，如果你不理解这个脚本的原理，不能自行判断风险，你不应该使用这个脚本"
         )
